@@ -1,0 +1,58 @@
+# BookmarkX: Project Report
+
+## What is BookmarkX?
+
+**BookmarkX** is a professional-grade, privacy-first Chrome Extension designed for power users who need advanced bookmark management. It transforms the standard browser bookmarking system into a highly visual, intelligent workspace. 
+
+The extension draws heavy inspiration from top-tier productivity tools:
+*   **Lumilist**: Providing a visual "board" layout, drag-and-drop aesthetics, privacy modes, and folder organization.
+*   **AI New Tab**: Offering a sleek, highly customizable dashboard with focus modes, wallpapers, and integrated AI.
+
+---
+
+## Core Components & What We Built
+
+The extension operates across two distinct interfaces, each serving a specific workflow:
+
+### 1. The New Tab Workspace (`newtab/`)
+*The "Lumilist" style home base.*
+This overrides Chrome's default empty new tab page with a full-screen productivity dashboard.
+
+*   **Focus Mode vs. Workspace**: A main toggle allows users to hide their bookmarks completely, leaving only a minimalist clock and web search bar to minimize distractions.
+*   **Folder Rail**: A sidebar of chips representing folder hierarchies for instant filtering.
+*   **Privacy Blur**: A dedicated toggle that instantly blurs all bookmark text and images, perfect for screen sharing or public spaces.
+*   **Appearance Customization**: Users can upload custom wallpapers, adjust the darkness of the background overlay, and toggle between visual "board" or "list" view modes.
+
+### 2. The Popup Utility (`popup/`)
+*The quick-action command center.*
+Accessed by clicking the extension icon in the toolbar, this is used for rapid interactions without losing context of the current webpage.
+
+*   **Quick Save & Edit**: Rapidly add the current tab, place it in a collection, and assign tags. Keyboard shortcuts (Ctrl+N, Ctrl+F, Ctrl+Z) are supported.
+*   **AI Auto-Tagging**: Integration with Anthropic/OpenRouter APIs to read a URL/title and automatically suggest relevant tags. A fallback "Smart Local" regex engine handles common sites (e.g., GitHub -> `dev`).
+*   **Link Health & Maintenance**: 
+    *   **Dead Link Checker**: Pings all saved URLs in the background to detect 404s, redirects, or broken pages.
+    *   **Duplicate Finder**: Scans and groups identical URLs to help clean up clutter.
+*   **Settings Engine**: A slide-out panel that controls the global theme (6 options), custom neon accent colors, layout density, and handles data export/clearing.
+
+### 3. The Utilities & Data Layer (`utils/`)
+*The invisible engine.*
+*   **Bookmarks API (`bookmarks.js`)**: Interfaces directly with Chrome's native bookmark system, ensuring nothing is locked into a proprietary database.
+*   **Tag Metadata (`tags.js`)**: Chrome's native bookmarks don't support tags, so we built a custom metadata registry stored in `chrome.storage.local` to securely link tags, AI summaries, and link health status to specific bookmark IDs.
+*   **Fuzzy Search (`search.js`)**: Uses `Fuse.js` for typo-tolerant, lightning-fast searching across titles, URLs, and tags.
+
+---
+
+## Recent Development Milestones
+
+During our recent sessions, we successfully implemented the following:
+
+1.  **Premium UI Overhaul**: Implemented a dark-mode, glassmorphism UI using modern CSS variables, CSS grid/flexbox layouts, and high-quality SVG icons.
+2.  **Settings Panel Wiring**: Connected the UI to the underlying JavaScript logic, enabling persistent switching of the 6 color themes, 8 accent colors, and 3 density layouts.
+3.  **Data Management**: Implemented the logic for exporting a `.json` backup of all bookmarks and tags, and the ability to wipe tag data safely.
+4.  **Sorting Logic**: Built out the algorithms to sort the visible bookmark state by A-Z, Newest, or Domain.
+
+## Next Steps
+The core application is fully operational. Future enhancements could include:
+*   Implementing Drag-and-Drop rearranging on the New Tab board.
+*   Adding a "Read it Later" article extractor.
+*   Syncing custom tags across devices using `chrome.storage.sync`.

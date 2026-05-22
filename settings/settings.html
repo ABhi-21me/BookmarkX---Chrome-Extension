@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>BookmarkX - Settings</title>
+  <link rel="stylesheet" href="settings.css">
+  <script src="../utils/theme.js"></script>
+  <script src="../utils/background.js"></script>
+  <script src="../utils/bookmarks.js"></script>
+  <script src="../utils/tags.js"></script>
+  <script src="settings.js"></script>
+</head>
+<body data-theme="terminal">
+
+  <div id="bg-layer"></div>
+  <div id="bg-overlay"></div>
+
+  <div id="app">
+    <aside id="sidebar">
+      <div class="sidebar-header">
+        <div class="brand">BookmarkX <span class="brand-accent">Settings</span></div>
+      </div>
+      <a href="../newtab/newtab.html" class="back-btn" id="backBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+        Back to Dashboard
+      </a>
+      <div class="sidebar-nav">
+        <button class="nav-btn active" data-tab="appearance">Appearance</button>
+        <button class="nav-btn" data-tab="data">Data &amp; Backup</button>
+        <button class="nav-btn" data-tab="about">About</button>
+      </div>
+    </aside>
+
+    <main id="content">
+      <header class="content-header">
+        <h1 id="pageTitle">Appearance</h1>
+      </header>
+
+      <div class="scroll-container">
+
+        <!-- APPEARANCE (Links to the New Tab slide panel or duplicates basic settings) -->
+        <section class="settings-section active" id="sec-appearance">
+          <div class="card">
+            <h3>Look & Feel</h3>
+            <p class="desc">Appearance can be fully customized directly from the New Tab page (click the palette icon). These are global overrides.</p>
+            <div class="row">
+              <label>Global Theme</label>
+              <select id="selTheme">
+                <option value="terminal">Terminal (Dark)</option>
+                <option value="midnight">Midnight</option>
+                <option value="aurora">Aurora</option>
+                <option value="sunset">Sunset</option>
+                <option value="ice">Ice (Light)</option>
+                <option value="rose">Rose</option>
+                <option value="ash">Ash</option>
+                <option value="ocean">Ocean</option>
+                <option value="forest">Forest</option>
+                <option value="cyberpunk">Cyberpunk</option>
+                <option value="dracula">Dracula</option>
+              </select>
+            </div>
+          </div>
+        </section>
+
+        <!-- DATA -->
+        <section class="settings-section" id="sec-data">
+          <div class="card">
+            <h3>Export Data</h3>
+            <p class="desc">Download all your tags, custom metadata, and hidden states as a JSON file.</p>
+            <button class="btn btn-primary" id="btnExport">Export JSON</button>
+          </div>
+          <div class="card">
+            <h3>Import Data</h3>
+            <p class="desc">Restore your tags and metadata from a previous backup. (Bookmarks must already exist in Chrome).</p>
+            <input type="file" id="fileImport" accept=".json" style="display:none;">
+            <button class="btn btn-outline" id="btnImport">Import JSON</button>
+          </div>
+          <div class="card danger-zone">
+            <h3 class="danger-text">Danger Zone</h3>
+            <p class="desc">Erase all custom tags, metadata, and extension settings. This will NOT delete your Chrome bookmarks.</p>
+            <button class="btn btn-danger" id="btnReset">Reset Extension Data</button>
+          </div>
+        </section>
+
+
+        <!-- ABOUT -->
+        <section class="settings-section" id="sec-about">
+          <div class="card">
+            <h3>BookmarkX v2.0</h3>
+            <p class="desc">Built for focus and aesthetics. Features include grid/list views, advanced tagging, privacy modes, and focus tools.</p>
+            <div class="row">
+              <span>Version</span>
+              <span class="mono">2.0.0</span>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

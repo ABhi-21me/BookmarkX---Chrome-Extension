@@ -1,0 +1,26 @@
+{
+  "manifest_version": 3,
+  "name": "BookmarkX",
+  "short_name": "BookmarkX",
+  "version": "2.0.0",
+  "description": "Your bookmarks, elevated. Visual workspace with AI tagging, smart search, and beautiful themes.",
+  "icons": {
+    "16": "assets/icons/icon16.png",
+    "32": "assets/icons/icon32.png",
+    "48": "assets/icons/icon48.png",
+    "128": "assets/icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "BookmarkX"
+  },
+  "chrome_url_overrides": {
+    "newtab": "newtab/newtab.html"
+  },
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "options_page": "settings/settings.html",
+  "permissions": ["bookmarks", "storage", "unlimitedStorage", "tabs", "activeTab"],
+  "host_permissions": ["<all_urls>"]
+}
