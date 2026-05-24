@@ -11,55 +11,74 @@ chrome.storage.local.get(['extensionEnabled'], (result) => {
   }
 });
 
-let state = {
-  bookmarks: [],
-  folders: [],
-  tags: [],
-  meta: {},
-  isUIVisible: true,
-  editingId: null,
-  settings: {
-    theme: 'terminal',
-    accent: '#00ff88',
-    font: 'dm-sans',
-    bgType: 'solid',
-    bgVal: '#080808',
-    bgDarkness: 60,
-    bgBlur: 0,
-    cardStyle: 'glass',
-    gridCols: 4,
-    showFavicons: true,
-    showUrl: true,
-    showTags: true,
-    showClockWidget: true
-  }
+// Local alias for convenience, points to the reactive proxy
+let state = window.appStore.state;
+
+// Friendly display names for Chrome's built-in root folders
+const FOLDER_NICE_NAMES = {
+  '1': 'Bookmarks Bar',
+  '2': 'Other Bookmarks',
 };
 
-// Chrome root folder IDs to hide from sidebar
-const CHROME_ROOT_IDS = new Set(['0', '1', '2', '3']);
-const CHROME_ROOT_TITLES = new Set(['Bookmarks bar', 'Other bookmarks', 'Mobile bookmarks', 'Managed bookmarks']);
+// Folder IDs to completely hide (absolute root + Mobile bookmarks)
+const CHROME_HIDDEN_IDS = new Set(['0', '3']);
 
 document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
-  await ThemeUtils.init();
-  await BackgroundUtils.init('bg-layer', 'bg-overlay');
   await loadSettings();
+  applyAllSettings(); // Renders Theme, viewMode, clock, UI toggle state
+  await BackgroundUtils.init('bg-layer', 'bg-overlay');
   await loadData();
+  renderAll(); // Renders Bookmarks
   bindEvents();
-  applyAllSettings();
-  renderAll();
+  setupSubscriptions();
 }
 
-// ─── STORAGE ──────────────────────────────────────────────────────────────
+function setupSubscriptions() {
+  window.appStore.subscribe('isUIVisible', () => {
+    applyUIVisibility();
+  });
+  
+  window.appStore.subscribe('*', (change) => {
+    if (!change) return;
+    
+    // Auto-save all state changes to Chrome Storage
+    saveSettings();
+
+    // Determine what to update based on the property changed
+    const p = change.property;
+
+    // Apply fast CSS updates
+    if (['theme', 'accent', 'bgType', 'bgVal', 'bgDarkness', 'bgBlur', 'cardStyle', 'gridCols', 'showClockWidget'].includes(p)) {
+      applyAllSettings();
+    }
+    
+    // Update clock widget classes
+    if (p.startsWith('clock') || p === 'dateFormat' || p === 'showClockWidget') {
+      if (window.clockWidget) {
+        window.clockWidget.applySettings();
+        window.clockWidget.updateTime();
+      }
+    }
+    
+    // Only re-render DOM for bookmarks if these change
+    if (['showFavicons', 'showUrl', 'viewMode', 'bookmarks'].includes(p)) {
+      renderBoard();
+    }
+  });
+}
+
+// â”€â”€â”€ STORAGE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function loadSettings() {
   return new Promise(resolve => {
-    chrome.storage.local.get(['bx_v2_settings', 'bx_ui_visible'], items => {
+    chrome.storage.local.get(['bx_v2_settings', 'bx_ui_visible', 'bx_viewMode'], items => {
       if (items.bx_v2_settings) {
-        state.settings = { ...state.settings, ...items.bx_v2_settings };
+        Object.assign(state.settings, items.bx_v2_settings);
       }
       if (items.bx_ui_visible !== undefined) state.isUIVisible = items.bx_ui_visible;
+      if (items.bx_viewMode !== undefined) state.viewMode = items.bx_viewMode;
       resolve();
     });
   });
@@ -68,43 +87,28 @@ async function loadSettings() {
 function saveSettings() {
   chrome.storage.local.set({
     bx_v2_settings: state.settings,
-    bx_ui_visible: state.isUIVisible
+    bx_ui_visible: state.isUIVisible,
+    bx_viewMode: state.viewMode
   });
 }
 
-// ─── DATA LOADING ─────────────────────────────────────────────────────────
+// â”€â”€â”€ DATA LOADING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function loadData() {
   const tree = await BookmarkUtils.getTree();
   const flat = BookmarkUtils.flattenTree(tree);
   state.bookmarks = flat.bookmarks;
 
-  // Filter out Chrome's default root folders from sidebar — show only real user folders
-  state.folders = flat.folders.filter(f => {
-    if (CHROME_ROOT_IDS.has(f.id)) return false;
-    if (CHROME_ROOT_TITLES.has(f.title)) return false;
-    return true;
-  });
-
-  state.meta = await TagUtils.getAllMeta();
-
-  // Extract tags
-  const tagCounts = {};
-  for (let id in state.meta) {
-    (state.meta[id].tags || []).forEach(t => {
-      tagCounts[t] = (tagCounts[t] || 0) + 1;
-    });
-  }
-  state.tags = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a]);
+  // Include all folders except absolute root (0) and Mobile bookmarks (3)
+  state.allFolders = flat.folders.filter(f => !CHROME_HIDDEN_IDS.has(f.id));
 }
 
-// ─── EVENT BINDING ────────────────────────────────────────────────────────
+// â”€â”€â”€ EVENT BINDING â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function bindEvents() {
   const dockSettings = document.getElementById('dockSettings');
 
   document.addEventListener('keydown', e => {
-    // Ignore when typing in inputs/textareas unless escaping
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
       if (e.key === 'Escape') {
         if (!document.getElementById('bookmarkModal').classList.contains('hidden')) {
@@ -154,18 +158,18 @@ function bindEvents() {
 
   // Persistent Side Dock: Add Bookmark
   document.getElementById('dockAddBookmark').addEventListener('click', () => openModal());
+
   // Persistent Side Dock: Clock Widget Toggle
   document.getElementById('dockClockToggle').addEventListener('click', () => {
     state.settings.showClockWidget = !state.settings.showClockWidget;
-    saveSettings();
+
     applyAllSettings();
   });
 
-  // Show/Hide UI toggle (Side Dock persistent toggle)
+  // Show/Hide UI toggle
   document.getElementById('uiToggle').addEventListener('click', () => {
-    state.isUIVisible = !state.isUIVisible;
-    applyUIVisibility();
-    saveSettings();
+    state.isUIVisible = !state.isUIVisible; // This will trigger the reactive subscription
+
   });
 
   // Persistent Side Dock: Open Chrome Downloads
@@ -178,7 +182,7 @@ function bindEvents() {
     });
   }
 
-  // Persistent Side Dock: Search Overlay Toggle
+  // Persistent Side Dock: Search Overlay
   document.getElementById('dockSearch').addEventListener('click', () => {
     const searchOverlay = document.getElementById('searchOverlay');
     const dockSearchInput = document.getElementById('dockSearchInput');
@@ -192,7 +196,6 @@ function bindEvents() {
     searchOverlay.classList.add('hidden');
     document.getElementById('dockSearch').classList.remove('active');
     document.getElementById('dockSearchInput').value = '';
-    // Reset bookmark cards filter
     document.querySelectorAll('.bm-card').forEach(card => card.style.display = '');
     document.getElementById('searchResultsCount').textContent = '';
   }
@@ -204,24 +207,17 @@ function bindEvents() {
     const q = e.target.value.toLowerCase().trim();
     const resultsContainer = document.getElementById('searchResultsList');
     const countEl = document.getElementById('searchResultsCount');
-    
+
     if (!q) {
       resultsContainer.innerHTML = '';
       countEl.textContent = '';
       return;
     }
 
-    const escapeHTML = str => (str || '').replace(/[&<>'"]/g, 
-      tag => ({
-          '&': '&amp;',
-          '<': '&lt;',
-          '>': '&gt;',
-          "'": '&#39;',
-          '"': '&quot;'
-        }[tag]));
+    const matches = state.bookmarks.filter(b =>
+      b.title.toLowerCase().includes(q) || b.url.toLowerCase().includes(q)
+    );
 
-    const matches = state.bookmarks.filter(b => b.title.toLowerCase().includes(q) || b.url.toLowerCase().includes(q));
-    
     if (matches.length > 0) {
       countEl.textContent = `Found ${matches.length} matches`;
       resultsContainer.innerHTML = matches.map(b => `
@@ -273,6 +269,16 @@ function bindEvents() {
     if (dockSettings) dockSettings.classList.remove('active');
   });
 
+  const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+  if (saveSettingsBtn) {
+    saveSettingsBtn.addEventListener('click', () => {
+      saveSettings(); // Ensure settings are forced to save
+      document.getElementById('appearancePanel').classList.add('hidden');
+      if (dockSettings) dockSettings.classList.remove('active');
+      showToast('All set! Your changes have been saved. Please refresh the page to see the updates.');
+    });
+  }
+
   // Appearance Tabs
   document.querySelectorAll('.panel-tab').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -291,7 +297,7 @@ function bindEvents() {
       state.settings.theme = swatch.dataset.theme;
       ThemeUtils.applyTheme(state.settings.theme);
       syncAppearanceUI();
-      saveSettings();
+
     }
   });
 
@@ -301,7 +307,7 @@ function bindEvents() {
       state.settings.accent = circle.dataset.color;
       ThemeUtils.applyAccent(state.settings.accent);
       syncAppearanceUI();
-      saveSettings();
+
     }
   });
 
@@ -310,7 +316,7 @@ function bindEvents() {
       state.settings.font = btn.dataset.font;
       ThemeUtils.applyFont(state.settings.font);
       syncAppearanceUI();
-      saveSettings();
+
     });
   });
 
@@ -319,12 +325,11 @@ function bindEvents() {
     btn.addEventListener('click', () => {
       state.settings.bgType = btn.dataset.bg;
       if (state.settings.bgType === 'solid') state.settings.bgVal = '#080808';
-      BackgroundUtils.apply(state.settings.bgType, state.settings.bgVal);
+      BackgroundUtils.apply(state.settings.bgType, state.settings.bgVal, state.settings.meshColors);
       syncAppearanceUI();
-      saveSettings();
+
     });
   });
-
 
   const wpInput = document.getElementById('wallpaperInput');
   wpInput.addEventListener('change', e => {
@@ -335,7 +340,7 @@ function bindEvents() {
         state.settings.bgVal = reader.result;
         state.settings.bgType = 'image';
         BackgroundUtils.apply('image', state.settings.bgVal);
-        saveSettings();
+
       };
       reader.readAsDataURL(file);
     }
@@ -351,9 +356,9 @@ function bindEvents() {
         }
         VideoDB.saveVideo(file).then(() => {
           state.settings.bgType = 'video';
-          state.settings.bgVal = ''; // handled via IDB now
+          state.settings.bgVal = '';
           BackgroundUtils.apply('video', '');
-          saveSettings();
+
           const nameEl = document.getElementById('videoWallpaperName');
           if (nameEl) nameEl.textContent = file.name;
           showToast('Video saved successfully!');
@@ -369,14 +374,14 @@ function bindEvents() {
     state.settings.bgDarkness = parseInt(e.target.value);
     document.getElementById('darknessVal').textContent = `${state.settings.bgDarkness}%`;
     BackgroundUtils.applyOverlay(state.settings.bgDarkness, state.settings.bgBlur);
-    saveSettings();
+
   });
 
   document.getElementById('blurSlider').addEventListener('input', e => {
     state.settings.bgBlur = parseInt(e.target.value);
     document.getElementById('blurVal').textContent = `${state.settings.bgBlur}px`;
     BackgroundUtils.applyOverlay(state.settings.bgDarkness, state.settings.bgBlur);
-    saveSettings();
+
   });
 
   // Layout
@@ -384,7 +389,18 @@ function bindEvents() {
     btn.addEventListener('click', () => {
       state.settings.cardStyle = btn.dataset.cardstyle;
       document.body.setAttribute('data-cardstyle', state.settings.cardStyle || 'glass');
-      saveSettings();
+
+    });
+  });
+
+  // View Mode
+  document.querySelectorAll('[data-viewmode]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state.viewMode = btn.dataset.viewmode;
+      document.body.setAttribute('data-viewmode', state.viewMode);
+      document.querySelectorAll('[data-viewmode]').forEach(b => b.classList.toggle('active', b.dataset.viewmode === state.viewMode));
+      localStorage.setItem('bx_viewMode', state.viewMode);
+      renderBoard();
     });
   });
 
@@ -392,10 +408,10 @@ function bindEvents() {
     state.settings.gridCols = parseInt(e.target.value);
     document.documentElement.style.setProperty('--grid-cols', state.settings.gridCols);
     document.getElementById('columnsVal').textContent = `${state.settings.gridCols} columns`;
-    saveSettings();
+
   });
 
-  ['clockToggle', 'faviconToggle', 'urlToggle', 'tagsVisToggle'].forEach(id => {
+  ['clockToggle', 'faviconToggle', 'urlToggle'].forEach(id => {
     const el = document.getElementById(id);
     if (el) {
       el.addEventListener('click', e => {
@@ -404,25 +420,49 @@ function bindEvents() {
         const isOn = toggle.classList.contains('active');
         if (id === 'faviconToggle') state.settings.showFavicons = isOn;
         if (id === 'urlToggle') state.settings.showUrl = isOn;
-        if (id === 'tagsVisToggle') state.settings.showTags = isOn;
-        if (id === 'clockToggle') {
-          state.settings.showClockWidget = isOn;
-          applyAllSettings();
-        }
-        if (id !== 'clockToggle') renderBoard();
-        saveSettings();
+        if (id === 'clockToggle') state.settings.showClockWidget = isOn;
       });
     }
   });
 
-  // Data Tab Event Listeners
+  // Clock Settings
+  const clockSettingsMap = [
+    { id: 'clockPosSelect', key: 'clockPos' },
+    { id: 'clockLayoutSelect', key: 'clockLayout' },
+    { id: 'clockStyleSelect', key: 'clockStyle' },
+    { id: 'clockAnimSelect', key: 'clockAnim' },
+    { id: 'dateFormatSelect', key: 'dateFormat' }
+  ];
+  
+  clockSettingsMap.forEach(({ id, key }) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('change', e => {
+        state.settings[key] = e.target.value;
+      });
+    }
+  });
+
+  ['clock24hrToggle', 'clockSecondsToggle'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('click', e => {
+        const toggle = e.currentTarget;
+        toggle.classList.toggle('active');
+        const isOn = toggle.classList.contains('active');
+        if (id === 'clock24hrToggle') state.settings.clock24hr = isOn;
+        if (id === 'clockSecondsToggle') state.settings.clockShowSeconds = isOn;
+      });
+    }
+  });
+
+  // Data Tab
   const exportBtn = document.getElementById('exportBookmarksBtn');
   if (exportBtn) {
     exportBtn.addEventListener('click', () => {
       const data = {
         bookmarks: state.bookmarks,
-        settings: state.settings,
-        meta: state.meta
+        settings: state.settings
       };
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -441,14 +481,13 @@ function bindEvents() {
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = e => {
+      reader.onload = ev => {
         try {
-          const data = JSON.parse(e.target.result);
+          const data = JSON.parse(ev.target.result);
           if (data && data.bookmarks) {
             state.bookmarks = data.bookmarks;
             if (data.settings) state.settings = { ...state.settings, ...data.settings };
-            saveBookmarks();
-            saveSettings();
+
             applyAllSettings();
             renderAll();
             showToast('Bookmarks imported successfully!');
@@ -478,32 +517,44 @@ function bindEvents() {
   // Save bookmark from modal
   document.getElementById('saveModalBtn').addEventListener('click', saveBookmarkFromModal);
 
-  // Tag input in modal — press Enter to add tag
-  document.getElementById('bm-tag-input').addEventListener('keydown', e => {
+  // Folder select â€” show/hide "new folder name" input
+  document.getElementById('bm-folder').addEventListener('change', e => {
+    const newFolderRow = document.getElementById('new-folder-row');
+    if (e.target.value === '__new__') {
+      newFolderRow.classList.remove('hidden');
+      document.getElementById('bm-new-folder-name').focus();
+    } else {
+      newFolderRow.classList.add('hidden');
+    }
+  });
+
+  // Press Enter in new-folder-name to proceed to save
+  document.getElementById('bm-new-folder-name').addEventListener('keydown', e => {
     if (e.key === 'Enter') {
       e.preventDefault();
-      const val = e.target.value.trim().replace(/^#/, '');
-      if (val) {
-        addTagToModal(val);
-        e.target.value = '';
-      }
+      saveBookmarkFromModal();
     }
   });
 }
 
-// ─── APPLY FUNCTIONS ──────────────────────────────────────────────────────
+// â”€â”€â”€ APPLY FUNCTIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function applyAllSettings() {
   ThemeUtils.applyTheme(state.settings.theme);
   ThemeUtils.applyAccent(state.settings.accent);
-  ThemeUtils.applyFont(state.settings.font);
-  BackgroundUtils.apply(state.settings.bgType, state.settings.bgVal);
+  BackgroundUtils.apply(state.settings.bgType, state.settings.bgVal, state.settings.meshColors);
   BackgroundUtils.applyOverlay(state.settings.bgDarkness, state.settings.bgBlur);
   document.body.setAttribute('data-cardstyle', state.settings.cardStyle);
   document.documentElement.style.setProperty('--grid-cols', state.settings.gridCols);
+
+  // Restore view mode
+  const savedViewMode = localStorage.getItem('bx_viewMode');
+  if (savedViewMode) state.viewMode = savedViewMode;
+  document.body.setAttribute('data-viewmode', state.viewMode || 'grid');
+
   applyUIVisibility();
-  
-  // Clock Visibility
+
+  // Clock visibility
   const clockWidget = document.getElementById('clockWidget');
   const dockClockToggle = document.getElementById('dockClockToggle');
   const iconClock = dockClockToggle ? dockClockToggle.querySelector('.icon-clock') : null;
@@ -529,100 +580,164 @@ function applyUIVisibility() {
   const iconEye = uiToggle ? uiToggle.querySelector('.icon-eye') : null;
   const iconEyeOff = uiToggle ? uiToggle.querySelector('.icon-eye-off') : null;
 
+  document.body.classList.toggle('bookmarks-hidden', !state.isUIVisible);
+
   if (state.isUIVisible) {
     if (bookmarkGrid) {
       bookmarkGrid.style.opacity = '1';
       bookmarkGrid.style.pointerEvents = '';
       bookmarkGrid.style.display = '';
     }
-    // We don't mess with emptyState display here unless it's needed, but let's let renderBookmarks handle it.
-    // However, if we hid it, we must ensure it's not permanently 'none'.
-    // The renderBookmarks() function correctly adds/removes 'hidden' class.
-    // We just need to make sure we don't override its inline display too heavily, so we clear it.
     if (emptyState) {
       emptyState.style.opacity = '1';
       emptyState.style.pointerEvents = '';
       emptyState.style.display = '';
     }
-
     if (uiToggle) uiToggle.classList.add('active');
     if (iconEye) iconEye.classList.remove('hidden');
     if (iconEyeOff) iconEyeOff.classList.add('hidden');
+    
+    // Fix: Immediately rerender to ensure layout isn't stuck empty
+    setTimeout(() => renderBoard(), 0);
   } else {
     if (bookmarkGrid) bookmarkGrid.style.display = 'none';
     if (emptyState) emptyState.style.display = 'none';
-
     if (uiToggle) uiToggle.classList.remove('active');
     if (iconEye) iconEye.classList.add('hidden');
     if (iconEyeOff) iconEyeOff.classList.remove('hidden');
   }
 }
 
-
-
 function syncAppearanceUI() {
-  // Theme swatches
   document.querySelectorAll('.theme-swatch').forEach(el =>
     el.classList.toggle('active', el.dataset.theme === state.settings.theme));
   document.querySelectorAll('.accent-circle').forEach(el =>
     el.classList.toggle('active', el.dataset.color === state.settings.accent));
-  document.querySelectorAll('[data-font]').forEach(el =>
-    el.classList.toggle('active', el.dataset.font === state.settings.font));
 
-  // Background
   document.querySelectorAll('[data-bg]').forEach(el =>
     el.classList.toggle('active', el.dataset.bg === state.settings.bgType));
   document.getElementById('imageUpload').classList.toggle('hidden', state.settings.bgType !== 'image');
   document.getElementById('videoUpload').classList.toggle('hidden', state.settings.bgType !== 'video');
+  const meshUpload = document.getElementById('meshUpload');
+  if (meshUpload) {
+    meshUpload.classList.toggle('hidden', state.settings.bgType !== 'mesh');
+    if (state.settings.meshColors) {
+      document.getElementById('meshColor1').value = state.settings.meshColors[0] || '#ffb875';
+      document.getElementById('meshColor2').value = state.settings.meshColors[1] || '#00e5ff';
+      document.getElementById('meshColor3').value = state.settings.meshColors[2] || '#ffd4d9';
+    }
+  }
   document.getElementById('darknessSlider').value = state.settings.bgDarkness;
   document.getElementById('darknessVal').textContent = `${state.settings.bgDarkness}%`;
   document.getElementById('blurSlider').value = state.settings.bgBlur;
   document.getElementById('blurVal').textContent = `${state.settings.bgBlur}px`;
 
-  // Layout
+  document.querySelectorAll('[data-viewmode]').forEach(el =>
+    el.classList.toggle('active', el.dataset.viewmode === (state.viewMode || 'grid')));
+
   document.querySelectorAll('[data-cardstyle]').forEach(el =>
     el.classList.toggle('active', el.dataset.cardstyle === state.settings.cardStyle));
   document.getElementById('columnsSlider').value = state.settings.gridCols;
   document.getElementById('columnsVal').textContent = `${state.settings.gridCols} columns`;
+
   const clockToggle = document.getElementById('clockToggle');
   if (clockToggle) clockToggle.classList.toggle('active', state.settings.showClockWidget !== false);
   const favToggle = document.getElementById('faviconToggle');
   if (favToggle) favToggle.classList.toggle('active', state.settings.showFavicons !== false);
   const uToggle = document.getElementById('urlToggle');
   if (uToggle) uToggle.classList.toggle('active', state.settings.showUrl !== false);
-  const tagToggle = document.getElementById('tagsVisToggle');
-  if (tagToggle) tagToggle.classList.toggle('active', state.settings.showTags !== false);
+
+  // Sync Clock Settings
+  const clockSettingsMap = [
+    { id: 'clockPosSelect', key: 'clockPos' },
+    { id: 'clockLayoutSelect', key: 'clockLayout' },
+    { id: 'clockStyleSelect', key: 'clockStyle' },
+    { id: 'clockAnimSelect', key: 'clockAnim' },
+    { id: 'dateFormatSelect', key: 'dateFormat' }
+  ];
+  clockSettingsMap.forEach(({ id, key }) => {
+    const el = document.getElementById(id);
+    if (el && state.settings[key]) {
+      el.value = state.settings[key];
+    }
+  });
+
+  const c24hr = document.getElementById('clock24hrToggle');
+  if (c24hr) c24hr.classList.toggle('active', state.settings.clock24hr === true);
+  const cSecs = document.getElementById('clockSecondsToggle');
+  if (cSecs) cSecs.classList.toggle('active', state.settings.clockShowSeconds === true);
 }
 
-// ─── RENDER ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ RENDER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function renderAll() {
   renderBoard();
 }
 
+function getFolderName(folderId) {
+  if (FOLDER_NICE_NAMES[folderId]) return FOLDER_NICE_NAMES[folderId];
+  const folder = state.allFolders.find(f => f.id === folderId);
+  return folder ? folder.title : 'Uncategorized';
+}
+
 function renderBoard() {
   const grid = document.getElementById('bookmarkGrid');
   const empty = document.getElementById('emptyState');
-
   const bms = state.bookmarks;
 
   if (bms.length === 0) {
     grid.innerHTML = '';
     empty.classList.remove('hidden');
+    grid.classList.add('hidden');
     return;
   }
-  
+
   empty.classList.add('hidden');
-  grid.innerHTML = bms.map(b => renderCard(b)).join('');
+  grid.classList.remove('hidden');
+
+  // Group bookmarks by parentId (folder)
+  const groups = new Map();
+  bms.forEach(b => {
+    const fid = b.parentId || '__none__';
+    if (!groups.has(fid)) groups.set(fid, []);
+    groups.get(fid).push(b);
+  });
+
+  if (groups.size === 0) return;
+
+  const mode = state.viewMode || 'grid';
+
+  if (mode === 'grid' || mode === 'compact') {
+    // Flat list of all bookmarks
+    grid.className = mode === 'compact' ? 'compact-grid' : 'grid-view';
+    grid.innerHTML = bms.map(b => renderCard(b)).join('');
+  } else if (mode === 'category' || mode === 'workspace') {
+    // Grouped by folder
+    grid.className = 'folder-groups-view';
+    const html = [];
+    for (const [fid, bookmarks] of groups) {
+      const folderName = getFolderName(fid);
+      html.push(`
+        <div class="folder-group ${mode === 'workspace' ? 'workspace-mode' : ''}">
+          <div class="folder-group-header">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+            <span class="folder-group-name">${escapeHTML(folderName)}</span>
+            <span class="folder-group-count">${bookmarks.length}</span>
+          </div>
+          <div class="folder-group-grid">
+            ${bookmarks.map(b => renderCard(b)).join('')}
+          </div>
+        </div>
+      `);
+    }
+    grid.innerHTML = html.join('');
+  }
 }
 
 function renderCard(b) {
   const domain = getDomain(b.url);
-  const m = state.meta[b.id] || {};
-
-  const tagsHtml = (state.settings.showTags && m.tags && m.tags.length)
-    ? `<div class="card-tags">${m.tags.slice(0, 3).map(t => `<span class="card-tag">#${escapeHTML(t)}</span>`).join('')}</div>`
-    : '';
 
   const favHtml = state.settings.showFavicons
     ? `<img src="https://www.google.com/s2/favicons?sz=32&domain=${encodeURIComponent(domain)}" class="card-favicon" onerror="this.style.display='none'">`
@@ -635,50 +750,75 @@ function renderCard(b) {
         <div class="card-title">${escapeHTML(b.title || domain)}</div>
       </div>
       ${state.settings.showUrl ? `<div class="card-domain">${escapeHTML(domain)}</div>` : ''}
-      ${tagsHtml}
     </a>
   `;
 }
 
-// ─── MODAL (Add / Edit Bookmark) ──────────────────────────────────────────
+// â”€â”€â”€ MODAL (Add / Edit Bookmark) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-let _modalTags = [];
+function populateFolderDropdown(selectedId) {
+  const folderSelect = document.getElementById('bm-folder');
+  folderSelect.innerHTML = '';
+
+  // âž• Create New Folder option
+  const newOpt = document.createElement('option');
+  newOpt.value = '__new__';
+  newOpt.textContent = 'âž•  Create New Folder...';
+  folderSelect.appendChild(newOpt);
+
+  // Visual separator
+  const sep = document.createElement('option');
+  sep.disabled = true;
+  sep.textContent = 'â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€';
+  folderSelect.appendChild(sep);
+
+  // All available folders
+  state.allFolders.forEach(f => {
+    const opt = document.createElement('option');
+    opt.value = f.id;
+    const niceName = FOLDER_NICE_NAMES[f.id] || f.title;
+    // Indent nested folders: depth 1 = root-level (no indent), depth 2+ = indented
+    const indent = '\u00a0\u00a0\u00a0\u00a0'.repeat(Math.max(0, (f.depth || 0) - 1));
+    opt.textContent = indent + niceName;
+    folderSelect.appendChild(opt);
+  });
+
+  // Select the right folder
+  if (selectedId && folderSelect.querySelector(`option[value="${selectedId}"]`)) {
+    folderSelect.value = selectedId;
+  } else {
+    // Default to Bookmarks Bar (id=1) if present, otherwise first real folder
+    const bmBar = folderSelect.querySelector('option[value="1"]');
+    if (bmBar) {
+      folderSelect.value = '1';
+    } else if (state.allFolders.length > 0) {
+      folderSelect.value = state.allFolders[0].id;
+    }
+  }
+
+  // Hide the new-folder input row
+  document.getElementById('new-folder-row').classList.add('hidden');
+}
 
 function openModal(bookmarkId) {
   state.editingId = bookmarkId || null;
-  _modalTags = [];
+
   document.getElementById('bm-url').value = '';
   document.getElementById('bm-title').value = '';
-  document.getElementById('bm-tag-input').value = '';
-  document.getElementById('bm-selected-tags').innerHTML = '';
+  document.getElementById('bm-new-folder-name').value = '';
   document.getElementById('modalHeading').textContent = bookmarkId ? 'Edit Bookmark' : 'Add Bookmark';
 
-  // Populate folders
-  const folderSelect = document.getElementById('bm-folder');
-  folderSelect.innerHTML = '';
-  state.folders.forEach(f => {
-    const opt = document.createElement('option');
-    opt.value = f.id;
-    opt.textContent = f.title;
-    if (f.id === state.activeFolder) opt.selected = true;
-    folderSelect.appendChild(opt);
-  });
-  // Default: first available folder (bookmarks bar)
-  if (!folderSelect.value && state.folders.length > 0) {
-    folderSelect.value = state.folders[0].id;
-  }
-
-  // If editing, prefill
   if (bookmarkId) {
     const bm = state.bookmarks.find(b => b.id === bookmarkId);
     if (bm) {
       document.getElementById('bm-url').value = bm.url;
       document.getElementById('bm-title').value = bm.title;
-      folderSelect.value = bm.parentId;
+      populateFolderDropdown(bm.parentId);
+    } else {
+      populateFolderDropdown(null);
     }
-    const m = state.meta[bookmarkId] || {};
-    _modalTags = [...(m.tags || [])];
-    renderModalTags();
+  } else {
+    populateFolderDropdown(null);
   }
 
   document.getElementById('bookmarkModal').classList.remove('hidden');
@@ -687,34 +827,16 @@ function openModal(bookmarkId) {
 
 function closeModal() {
   document.getElementById('bookmarkModal').classList.add('hidden');
+  document.getElementById('new-folder-row').classList.add('hidden');
   state.editingId = null;
-  _modalTags = [];
-}
-
-function addTagToModal(tag) {
-  if (!_modalTags.includes(tag)) {
-    _modalTags.push(tag);
-    renderModalTags();
-  }
-}
-
-function renderModalTags() {
-  const container = document.getElementById('bm-selected-tags');
-  container.innerHTML = _modalTags.map(t =>
-    `<span class="selected-tag">#${escapeHTML(t)}<button class="remove-tag" data-tag="${escapeAttr(t)}">×</button></span>`
-  ).join('');
-  container.querySelectorAll('.remove-tag').forEach(btn => {
-    btn.addEventListener('click', () => {
-      _modalTags = _modalTags.filter(t => t !== btn.dataset.tag);
-      renderModalTags();
-    });
-  });
 }
 
 async function saveBookmarkFromModal() {
   const url = document.getElementById('bm-url').value.trim();
   const title = document.getElementById('bm-title').value.trim();
-  const folderId = document.getElementById('bm-folder').value;
+  let folderId = document.getElementById('bm-folder').value;
+  const newFolderName = document.getElementById('bm-new-folder-name').value.trim();
+  const wasEditing = !!state.editingId;
 
   if (!url) {
     document.getElementById('bm-url').focus();
@@ -722,33 +844,45 @@ async function saveBookmarkFromModal() {
   }
 
   try {
+    // If "Create New Folder" was chosen, create the folder first
+    if (folderId === '__new__') {
+      if (!newFolderName) {
+        document.getElementById('bm-new-folder-name').focus();
+        showToast('Please enter a folder name first.');
+        return;
+      }
+      // Create the new folder under Bookmarks Bar by default
+      const newFolder = await BookmarkUtils.create({ parentId: '1', title: newFolderName });
+      folderId = newFolder.id;
+    }
+
     let bookmarkId = state.editingId;
 
     if (bookmarkId) {
-      // Editing existing
-      await BookmarkUtils.update(bookmarkId, { title, url });
+      // Update existing bookmark
+      await BookmarkUtils.update(bookmarkId, { title: title || url, url });
+      // Move to new folder if the parent changed
+      const bm = state.bookmarks.find(b => b.id === bookmarkId);
+      if (bm && bm.parentId !== folderId) {
+        await BookmarkUtils.move(bookmarkId, { parentId: folderId });
+      }
     } else {
-      // Creating new
+      // Create new bookmark
       const created = await BookmarkUtils.create({ parentId: folderId, title: title || url, url });
       bookmarkId = created.id;
-    }
-
-    // Save tags via TagUtils.setTags (the correct API)
-    if (_modalTags.length > 0 || bookmarkId) {
-      await TagUtils.setTags(bookmarkId, _modalTags);
     }
 
     closeModal();
     await loadData();
     renderAll();
-    showToast(state.editingId ? 'Bookmark updated!' : 'Bookmark saved!');
+    showToast(wasEditing ? 'Bookmark updated!' : 'Bookmark saved!');
   } catch (err) {
     showToast('Error saving bookmark.');
     console.error(err);
   }
 }
 
-// ─── TOAST ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ TOAST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function showToast(msg) {
   const toast = document.getElementById('toast');
@@ -757,7 +891,7 @@ function showToast(msg) {
   setTimeout(() => toast.classList.add('hidden'), 2800);
 }
 
-// ─── UTILITIES ────────────────────────────────────────────────────────────
+// â”€â”€â”€ UTILITIES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function getDomain(url) {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url || ''; }
@@ -768,3 +902,4 @@ function escapeHTML(str) {
 function escapeAttr(str) {
   return escapeHTML(str).replace(/"/g, '&quot;');
 }
+

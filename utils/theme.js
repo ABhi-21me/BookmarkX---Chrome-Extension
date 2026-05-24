@@ -1,10 +1,9 @@
 const ThemeUtils = {
   async init() {
     return new Promise(resolve => {
-      chrome.storage.local.get(['bx_theme', 'bx_accent', 'bx_font'], items => {
+      chrome.storage.local.get(['bx_theme', 'bx_accent'], items => {
         this.applyTheme(items.bx_theme || 'terminal');
         this.applyAccent(items.bx_accent || null);
-        this.applyFont(items.bx_font || 'dm-sans');
         resolve();
       });
     });
@@ -32,21 +31,5 @@ const ThemeUtils = {
     document.documentElement.style.setProperty('--accent-hover', color);
     document.documentElement.style.setProperty('--accent-bg', `rgba(${r},${g},${b},0.1)`);
     document.documentElement.style.setProperty('--accent-glow', `0 0 24px rgba(${r},${g},${b},0.35)`);
-  },
-
-  applyFont(font) {
-    if (font === 'jetbrains') {
-      document.body.style.fontFamily = "var(--font-mono)";
-    } else if (font === 'serif') {
-      document.body.style.fontFamily = "Georgia, serif";
-    } else if (font === 'inter') {
-      document.body.style.fontFamily = "'Inter', sans-serif";
-    } else if (font === 'roboto') {
-      document.body.style.fontFamily = "'Roboto', sans-serif";
-    } else if (font === 'outfit') {
-      document.body.style.fontFamily = "'Outfit', sans-serif";
-    } else {
-      document.body.style.fontFamily = "var(--font-ui)";
-    }
   }
 };

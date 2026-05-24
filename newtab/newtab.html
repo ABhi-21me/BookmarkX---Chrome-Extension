@@ -70,6 +70,7 @@
           <button class="panel-tab active" data-ptab="theme">Theme</button>
           <button class="panel-tab" data-ptab="background">Background</button>
           <button class="panel-tab" data-ptab="layout">Layout</button>
+          <button class="panel-tab" data-ptab="clock">Clock</button>
           <button class="panel-tab" data-ptab="data">Data</button>
         </div>
 
@@ -105,17 +106,7 @@
               <div class="accent-circle" data-color="#84cc16" style="background: #84cc16;"></div>
             </div>
           </div>
-          <div class="setting-group">
-            <div class="setting-label">Font Style</div>
-            <div class="option-group">
-              <button class="option-btn active" data-font="dm-sans">Modern</button>
-              <button class="option-btn" data-font="jetbrains">Terminal</button>
-              <button class="option-btn" data-font="serif">Editorial</button>
-              <button class="option-btn" data-font="inter">Inter</button>
-              <button class="option-btn" data-font="roboto">Roboto</button>
-              <button class="option-btn" data-font="outfit">Outfit</button>
-            </div>
-          </div>
+
         </div>
 
         <!-- TAB: BACKGROUND -->
@@ -139,6 +130,15 @@
             </label>
             <input type="file" id="wallpaperInput" accept="image/*" hidden />
           </div>
+          <!-- Mesh colors upload -->
+          <div class="setting-group hidden" id="meshUpload">
+            <div class="setting-label">Mesh Gradient Colors</div>
+            <div style="display: flex; gap: 8px;">
+              <input type="color" id="meshColor1" value="#ffb875" style="width: 100%; height: 32px; border: none; cursor: pointer;" />
+              <input type="color" id="meshColor2" value="#00e5ff" style="width: 100%; height: 32px; border: none; cursor: pointer;" />
+              <input type="color" id="meshColor3" value="#ffd4d9" style="width: 100%; height: 32px; border: none; cursor: pointer;" />
+            </div>
+          </div>
           <!-- Video wallpaper upload -->
           <div class="setting-group hidden" id="videoUpload">
             <div class="setting-label">Custom Video Wallpaper</div>
@@ -160,23 +160,85 @@
           </div>
         </div>
 
-        <!-- TAB: LAYOUT -->
-        <div class="panel-section" data-psection="layout">
+        <!-- TAB: CLOCK -->
+        <div class="panel-section" data-psection="clock">
           <div class="setting-group">
             <div class="setting-label">Visibility Options</div>
             <button class="option-btn full-width mb-2 active" id="clockToggle">Show Clock Widget</button>
-            <button class="option-btn full-width mb-2 active" id="faviconToggle">Show Favicons</button>
-            <button class="option-btn full-width mb-2 active" id="urlToggle">Show URLs</button>
-            <button class="option-btn full-width active" id="tagsVisToggle">Show Tags</button>
           </div>
           <div class="setting-group">
-            <div class="setting-label">Typography</div>
-            <div class="option-group" id="fontSelectRow">
-              <button class="option-btn active" data-font="'DM Sans', sans-serif">DM Sans</button>
-              <button class="option-btn" data-font="'Inter', sans-serif">Inter</button>
-              <button class="option-btn" data-font="'Roboto', sans-serif">Roboto</button>
-              <button class="option-btn" data-font="'Outfit', sans-serif">Outfit</button>
-              <button class="option-btn" data-font="'JetBrains Mono', monospace">Mono</button>
+            <div class="setting-label">Position</div>
+            <select id="clockPosSelect" class="full-width-select" style="width:100%; padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-primary); margin-bottom: 12px;">
+              <option value="top-left">Top Left</option>
+              <option value="top-center">Top Center</option>
+              <option value="top-right">Top Right</option>
+              <option value="center-left">Center Left</option>
+              <option value="center">Center</option>
+              <option value="center-right">Center Right</option>
+              <option value="bottom-left">Bottom Left</option>
+              <option value="bottom-center">Bottom Center</option>
+              <option value="bottom-right">Bottom Right</option>
+            </select>
+          </div>
+          <div class="setting-group">
+            <div class="setting-label">Layout Options</div>
+            <select id="clockLayoutSelect" class="full-width-select" style="width:100%; padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-primary); margin-bottom: 12px;">
+              <option value="time-above-date">Time above Date</option>
+              <option value="date-above-time">Date above Time</option>
+              <option value="inline">Inline Horizontal</option>
+              <option value="split">Split Layout</option>
+            </select>
+          </div>
+          <div class="setting-group">
+            <div class="setting-label">Clock Style</div>
+            <select id="clockStyleSelect" class="full-width-select" style="width:100%; padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-primary); margin-bottom: 12px;">
+              <option value="minimal">Minimal</option>
+              <option value="neon">Neon Mode</option>
+              <option value="cyberpunk">Cyberpunk Mode</option>
+              <option value="glassmorphism">Glassmorphism</option>
+            </select>
+          </div>
+          <div class="setting-group">
+            <div class="setting-label">Animation</div>
+            <select id="clockAnimSelect" class="full-width-select" style="width:100%; padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-primary); margin-bottom: 12px;">
+              <option value="fade">Fade</option>
+              <option value="slide">Slide</option>
+              <option value="glow-pulse">Glow Pulse</option>
+            </select>
+          </div>
+          <div class="setting-group">
+            <div class="setting-label">Date Format</div>
+            <select id="dateFormatSelect" class="full-width-select" style="width:100%; padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-primary); margin-bottom: 12px;">
+              <option value="dd-mm-yyyy">DD MMM</option>
+              <option value="dd/mm/yyyy">DD/MM/YYYY</option>
+              <option value="mm/dd/yyyy">MM/DD/YYYY</option>
+              <option value="day-month-date">Day, Month Date</option>
+              <option value="full">Full Readable</option>
+              <option value="short">Short (DD/MM)</option>
+            </select>
+          </div>
+          <div class="setting-group">
+            <div class="setting-label">Time Settings</div>
+            <label class="toggle-row" style="margin-bottom: 8px;">
+              <div class="pill-toggle" id="clock24hrToggle"><div class="pill-knob"></div></div>
+              <span>24 Hour Format</span>
+            </label>
+            <label class="toggle-row">
+              <div class="pill-toggle" id="clockSecondsToggle"><div class="pill-knob"></div></div>
+              <span>Show Seconds</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- TAB: LAYOUT -->
+        <div class="panel-section" data-psection="layout">
+          <div class="setting-group">
+            <div class="setting-label">View By</div>
+            <div class="option-group" id="viewModeGroup">
+              <button class="option-btn active" data-viewmode="grid">Grid</button>
+              <button class="option-btn" data-viewmode="compact">Compact</button>
+              <button class="option-btn" data-viewmode="category">Category</button>
+              <button class="option-btn" data-viewmode="workspace">Workspace</button>
             </div>
           </div>
           <div class="setting-group">
@@ -205,13 +267,6 @@
             <label class="toggle-row">
               <div class="pill-toggle active" id="urlToggle"><div class="pill-knob"></div></div>
               <span>Show domain below title</span>
-            </label>
-          </div>
-          <div class="setting-group">
-            <div class="setting-label">Show Tags</div>
-            <label class="toggle-row">
-              <div class="pill-toggle active" id="tagsVisToggle"><div class="pill-knob"></div></div>
-              <span>Display tag pills on cards</span>
             </label>
           </div>
         </div>
@@ -245,6 +300,10 @@
           </div>
         </div>
 
+        <!-- SAVE SETTINGS FOOTER -->
+        <div class="panel-footer" style="padding: 16px; border-top: 1px solid var(--border); margin-top: 16px; display: flex; justify-content: flex-end;">
+          <button id="saveSettingsBtn" class="btn-primary" style="padding: 8px 24px; font-weight: 600;">Save Changes</button>
+        </div>
       </div>
     </div>
 
@@ -271,12 +330,9 @@
             <label>Folder</label>
             <select id="bm-folder"></select>
           </div>
-          <div class="field-group">
-            <label>Tags <button class="ai-tag-btn" id="aiSuggestBtn">✦ AI Suggest</button></label>
-            <div class="tag-input-wrap">
-              <div id="bm-selected-tags" class="selected-tags-row"></div>
-              <input type="text" id="bm-tag-input" placeholder="Type tag, press Enter..." />
-            </div>
+          <div class="field-group hidden" id="new-folder-row">
+            <label>New Folder Name</label>
+            <input type="text" id="bm-new-folder-name" placeholder="e.g. Design, Work, Reading..." />
           </div>
         </div>
         <div class="modal-footer">
@@ -343,12 +399,11 @@
 
   <script src="../libs/fuse.min.js"></script>
   <script src="../utils/bookmarks.js"></script>
-  <script src="../utils/tags.js"></script>
   <script src="../utils/search.js"></script>
   <script src="../utils/theme.js"></script>
   <script src="../utils/background.js"></script>
-  <script src="../utils/ai.js"></script>
   <script src="../utils/clock.js"></script>
+  <script src="../utils/store.js"></script>
   <script src="newtab.js"></script>
 </body>
 </html>

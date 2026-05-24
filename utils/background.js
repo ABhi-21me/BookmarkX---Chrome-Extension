@@ -69,7 +69,7 @@ const BackgroundUtils = {
     });
   },
 
-  apply(type, value) {
+  apply(type, value, meshColors) {
     if (!this.layer) return;
     
     this.layer.style.background = 'none';
@@ -104,7 +104,10 @@ const BackgroundUtils = {
     if (type === 'solid') {
       this.layer.style.backgroundColor = value || '#080808';
     } else if (type === 'mesh') {
-      this.layer.style.backgroundImage = 'radial-gradient(at 40% 20%, hsla(28,100%,74%,1) 0px, transparent 50%), radial-gradient(at 80% 0%, hsla(189,100%,56%,1) 0px, transparent 50%), radial-gradient(at 0% 50%, hsla(355,100%,93%,1) 0px, transparent 50%)';
+      const c1 = meshColors && meshColors[0] ? meshColors[0] : '#ffb875';
+      const c2 = meshColors && meshColors[1] ? meshColors[1] : '#00e5ff';
+      const c3 = meshColors && meshColors[2] ? meshColors[2] : '#ffd4d9';
+      this.layer.style.backgroundImage = `radial-gradient(at 40% 20%, ${c1} 0px, transparent 50%), radial-gradient(at 80% 0%, ${c2} 0px, transparent 50%), radial-gradient(at 0% 50%, ${c3} 0px, transparent 50%)`;
       this.layer.style.backgroundColor = '#0a0a0a';
     } else if (type === 'image') {
       if (value) {
