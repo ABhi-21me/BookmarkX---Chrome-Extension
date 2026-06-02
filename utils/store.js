@@ -6,14 +6,21 @@
 class Store {
   constructor(initialState) {
     this.listeners = new Map();
+    this.proxyCache = new WeakMap(); // Cache proxies to maintain reference equality
+    
+    const self = this;
     
     // Create a deep proxy handler to intercept changes
     const handler = {
       get: (target, property, receiver) => {
         const value = Reflect.get(target, property, receiver);
         // If it's an object, proxy it recursively for deep reactivity
+        // Use cache to maintain reference equality on repeated access
         if (typeof value === 'object' && value !== null) {
-          return new Proxy(value, handler);
+          if (!self.proxyCache.has(value)) {
+            self.proxyCache.set(value, new Proxy(value, handler));
+          }
+          return self.proxyCache.get(value);
         }
         return value;
       },
@@ -22,9 +29,13 @@ class Store {
         const success = Reflect.set(target, property, value, receiver);
         
         if (success && oldValue !== value) {
-          this.notify(property, value, oldValue);
+          // Invalidate cache for the old value if it was an object
+          if (typeof oldValue === 'object' && oldValue !== null) {
+            self.proxyCache.delete(oldValue);
+          }
+          self.notify(property, value, oldValue);
           // Also notify a wildcard listener for any change
-          this.notify('*', { property, value, oldValue });
+          self.notify('*', { property, value, oldValue });
         }
         return success;
       }
@@ -75,7 +86,8 @@ const initialState = {
     showFavicons: true,
     showUrl: true,
     showClockWidget: true,
-    // New Clock Settings
+    font: 'default',
+    // Clock Settings
     clockPos: 'center',
     datePos: 'center',
     clockLayout: 'time-above-date',

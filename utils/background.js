@@ -11,6 +11,9 @@ const VideoDB = {
   db: null,
 
   async init() {
+    if (!window.indexedDB) {
+      return Promise.reject(new Error('IndexedDB is not available in this browser'));
+    }
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, 1);
       request.onerror = () => reject(request.error);
@@ -57,13 +60,22 @@ const BackgroundUtils = {
     
     return new Promise(resolve => {
       chrome.storage.local.get([
+        'bx_v2_settings',
         'bx_bg_type', 
         'bx_bg_val', 
         'bx_bg_darkness', 
         'bx_bg_blur'
       ], items => {
-        this.apply(items.bx_bg_type || 'solid', items.bx_bg_val || '#080808');
-        this.applyOverlay(items.bx_bg_darkness !== undefined ? items.bx_bg_darkness : 60, items.bx_bg_blur || 0);
+        // Prefer unified settings, fall back to legacy keys
+        const s = items.bx_v2_settings || {};
+        const bgType = s.bgType || items.bx_bg_type || 'solid';
+        const bgVal = s.bgVal || items.bx_bg_val || '#080808';
+        const bgDarkness = s.bgDarkness !== undefined ? s.bgDarkness : (items.bx_bg_darkness !== undefined ? items.bx_bg_darkness : 60);
+        const bgBlur = s.bgBlur !== undefined ? s.bgBlur : (items.bx_bg_blur || 0);
+        const meshColors = s.meshColors;
+        
+        this.apply(bgType, bgVal, meshColors);
+        this.applyOverlay(bgDarkness, bgBlur);
         resolve();
       });
     });
@@ -93,7 +105,15 @@ const BackgroundUtils = {
             // Fallback for previously saved dataURL
             videoEl.src = value;
           }
-        }).catch(err => console.error("Error loading video from DB:", err));
+        }).catch(err => {
+          console.error('[BookmarkX] Error loading video wallpaper:', err);
+          if (typeof window.showToast === 'function') {
+            window.showToast('Could not load video wallpaper. Please re-select it.', true);
+          }
+          // Fall back to solid background
+          videoEl.classList.remove('active');
+          if (this.layer) this.layer.classList.remove('video-active');
+        });
       } else {
         videoEl.classList.remove('active');
         videoEl.src = '';

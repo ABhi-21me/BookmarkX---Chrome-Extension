@@ -27,6 +27,10 @@ document.addEventListener('DOMContentLoaded', init);
 
 async function init() {
   await loadSettings();
+  // Signal that the store is ready with persisted settings applied
+  window._bxStoreReady = true;
+  window.dispatchEvent(new CustomEvent('bookmarkx:storeReady'));
+  
   applyAllSettings(); // Renders Theme, viewMode, clock, UI toggle state
   await BackgroundUtils.init('bg-layer', 'bg-overlay');
   await loadData();
@@ -79,16 +83,33 @@ async function loadSettings() {
       }
       if (items.bx_ui_visible !== undefined) state.isUIVisible = items.bx_ui_visible;
       if (items.bx_viewMode !== undefined) state.viewMode = items.bx_viewMode;
+      // Sync legacy keys so BackgroundUtils.init() reads correct values
+      chrome.storage.local.set({
+        bx_bg_type: state.settings.bgType,
+        bx_bg_val: state.settings.bgVal,
+        bx_bg_darkness: state.settings.bgDarkness,
+        bx_bg_blur: state.settings.bgBlur,
+        bx_theme: state.settings.theme,
+        bx_accent: state.settings.accent
+      });
       resolve();
     });
   });
 }
 
 function saveSettings() {
+  const s = state.settings;
   chrome.storage.local.set({
-    bx_v2_settings: state.settings,
+    bx_v2_settings: s,
     bx_ui_visible: state.isUIVisible,
-    bx_viewMode: state.viewMode
+    bx_viewMode: state.viewMode,
+    // Legacy keys kept in sync for BackgroundUtils.init() and ThemeUtils.init()
+    bx_bg_type: s.bgType,
+    bx_bg_val: s.bgVal,
+    bx_bg_darkness: s.bgDarkness,
+    bx_bg_blur: s.bgBlur,
+    bx_theme: s.theme,
+    bx_accent: s.accent
   });
 }
 
@@ -279,7 +300,18 @@ function bindEvents() {
     });
   }
 
-  // Appearance Tabs
+  // Appearance Panel nav (full-window sidebar)
+  document.querySelectorAll('.panel-nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.panel-nav-item').forEach(i => i.classList.remove('active'));
+      document.querySelectorAll('.panel-section').forEach(s => s.classList.remove('active'));
+      item.classList.add('active');
+      const section = document.querySelector(`.panel-section[data-psection="${item.dataset.ptab}"]`);
+      if (section) section.classList.add('active');
+    });
+  });
+
+  // Keep old panel-tab handler for any remaining tab elements
   document.querySelectorAll('.panel-tab').forEach(tab => {
     tab.addEventListener('click', () => {
       document.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
@@ -327,7 +359,6 @@ function bindEvents() {
       if (state.settings.bgType === 'solid') state.settings.bgVal = '#080808';
       BackgroundUtils.apply(state.settings.bgType, state.settings.bgVal, state.settings.meshColors);
       syncAppearanceUI();
-
     });
   });
 
@@ -609,6 +640,14 @@ function applyUIVisibility() {
 }
 
 function syncAppearanceUI() {
+  // Sync sidebar nav active state to current visible section
+  const activeSection = document.querySelector('.panel-section.active');
+  if (activeSection) {
+    const activeTab = activeSection.dataset.psection;
+    document.querySelectorAll('.panel-nav-item').forEach(i =>
+      i.classList.toggle('active', i.dataset.ptab === activeTab));
+  }
+
   document.querySelectorAll('.theme-swatch').forEach(el =>
     el.classList.toggle('active', el.dataset.theme === state.settings.theme));
   document.querySelectorAll('.accent-circle').forEach(el =>
@@ -618,6 +657,10 @@ function syncAppearanceUI() {
     el.classList.toggle('active', el.dataset.bg === state.settings.bgType));
   document.getElementById('imageUpload').classList.toggle('hidden', state.settings.bgType !== 'image');
   document.getElementById('videoUpload').classList.toggle('hidden', state.settings.bgType !== 'video');
+  const solidColorPicker = document.getElementById('solidColorPicker');
+  if (solidColorPicker) {
+    solidColorPicker.classList.toggle('hidden', state.settings.bgType !== 'solid');
+  }
   const meshUpload = document.getElementById('meshUpload');
   if (meshUpload) {
     meshUpload.classList.toggle('hidden', state.settings.bgType !== 'mesh');
@@ -737,19 +780,20 @@ function renderBoard() {
 }
 
 function renderCard(b) {
-  const domain = getDomain(b.url);
+  const url = b.url || '';
+  const domain = getDomain(url);
 
-  const favHtml = state.settings.showFavicons
+  const favHtml = (state.settings.showFavicons && url)
     ? `<img src="https://www.google.com/s2/favicons?sz=32&domain=${encodeURIComponent(domain)}" class="card-favicon" onerror="this.style.display='none'">`
     : '';
 
   return `
-    <a href="${escapeAttr(b.url)}" class="bm-card" data-bid="${b.id}">
+    <a href="${url ? escapeAttr(url) : '#'}" class="bm-card" data-bid="${b.id}">
       <div class="card-header">
         ${favHtml}
-        <div class="card-title">${escapeHTML(b.title || domain)}</div>
+        <div class="card-title">${escapeHTML(b.title || domain || 'Untitled')}</div>
       </div>
-      ${state.settings.showUrl ? `<div class="card-domain">${escapeHTML(domain)}</div>` : ''}
+      ${state.settings.showUrl && domain ? `<div class="card-domain">${escapeHTML(domain)}</div>` : ''}
     </a>
   `;
 }
@@ -894,7 +938,12 @@ function showToast(msg) {
 // â”€â”€â”€ UTILITIES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function getDomain(url) {
-  try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return url || ''; }
+  if (!url) return '';
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return '';
+  }
 }
 function escapeHTML(str) {
   return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');

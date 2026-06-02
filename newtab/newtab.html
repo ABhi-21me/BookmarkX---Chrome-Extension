@@ -9,307 +9,304 @@
 </head>
 <body data-theme="terminal">
 
-  <!-- Background Layer -->
   <div id="bg-layer"></div>
   <video id="bg-video" autoplay muted loop playsinline></video>
-  <div id="bg-overlay"></div><!-- darkness overlay, opacity controlled -->
+  <div id="bg-overlay"></div>
 
-  <!-- App Shell -->
   <div id="app">
-
-    <!-- TOP NAV BAR REMOVED -->
-
-    <!-- MAIN CONTENT -->
     <div id="workspace">
-
-      <!-- MAIN BOARD (Expanded full width) -->
-      <main id="board" style="padding-top: 24px;">
-
-        <!-- Neon Clock & Calendar Widget -->
+      <main id="board" style="padding-top:24px">
         <div id="clockWidget" class="clock-widget hidden">
           <div class="clock-time-container">
-            <div id="clockTime" class="clock-time">17:14</div>
+            <div id="clockTime" class="clock-time">00:00</div>
           </div>
           <div class="clock-date-row">
-            <span id="clockDay" class="clock-day">Friday</span>
-            <span id="clockDate" class="clock-date">22 May</span>
+            <span id="clockDay" class="clock-day">Monday</span>
+            <span id="clockDate" class="clock-date">1 Jan</span>
           </div>
-          <div id="clockCalendar" class="clock-calendar">
-            <!-- Rendered by JS -->
-          </div>
+          <div id="clockCalendar" class="clock-calendar"></div>
         </div>
-
-        <!-- Bookmark Grid -->
-        <div id="bookmarkGrid" class="grid-view">
-          <!-- Cards rendered by JS -->
-        </div>
-
-        <!-- Empty State -->
+        <div id="bookmarkGrid" class="grid-view"></div>
         <div id="emptyState" class="hidden">
           <div class="empty-icon">◈</div>
           <div class="empty-title">Nothing here</div>
           <div class="empty-sub">Add your first bookmark</div>
         </div>
-
       </main>
     </div>
 
-    <!-- ══════════════════════════════════════════════ -->
-    <!-- APPEARANCE PANEL (slides up from bottom)      -->
-    <!-- ══════════════════════════════════════════════ -->
+    <!-- APPEARANCE PANEL (full window) -->
     <div id="appearancePanel" class="slide-panel hidden">
       <div class="panel-backdrop" id="panelBackdrop"></div>
       <div class="panel-content">
         <div class="panel-header">
-          <h3 class="panel-title">Appearance</h3>
-          <button class="panel-close" id="closePanelBtn">✕</button>
-        </div>
-
-        <!-- TABS -->
-        <div class="panel-tabs">
-          <button class="panel-tab active" data-ptab="theme">Theme</button>
-          <button class="panel-tab" data-ptab="background">Background</button>
-          <button class="panel-tab" data-ptab="layout">Layout</button>
-          <button class="panel-tab" data-ptab="clock">Clock</button>
-          <button class="panel-tab" data-ptab="data">Data</button>
-        </div>
-
-        <!-- TAB: THEME -->
-        <div class="panel-section active" data-psection="theme">
-          <div class="setting-group">
-            <div class="setting-label">Color Theme</div>
-            <div class="theme-grid" id="themeGrid">
-              <div class="theme-swatch active" data-theme="terminal" style="background: #080808; border-color: #00ff88;"><span class="theme-swatch-label">Terminal</span></div>
-              <div class="theme-swatch" data-theme="midnight" style="background: #0d1117;"><span class="theme-swatch-label">Midnight</span></div>
-              <div class="theme-swatch" data-theme="aurora" style="background: #0f0c29;"><span class="theme-swatch-label">Aurora</span></div>
-              <div class="theme-swatch" data-theme="sunset" style="background: #0f0a00;"><span class="theme-swatch-label">Sunset</span></div>
-              <div class="theme-swatch" data-theme="ice" style="background: #f0f4f8; color: #000;"><span class="theme-swatch-label" style="color:#000">Ice</span></div>
-              <div class="theme-swatch" data-theme="rose" style="background: #0d0608;"><span class="theme-swatch-label">Rose</span></div>
-              <div class="theme-swatch" data-theme="ash" style="background: #18181b;"><span class="theme-swatch-label">Ash</span></div>
-              <div class="theme-swatch" data-theme="ocean" style="background: #001f3f;"><span class="theme-swatch-label">Ocean</span></div>
-              <div class="theme-swatch" data-theme="forest" style="background: #0b1a13;"><span class="theme-swatch-label">Forest</span></div>
-              <div class="theme-swatch" data-theme="cyberpunk" style="background: #000000; border-color: #fcee0a;"><span class="theme-swatch-label" style="color: #fcee0a;">Cyberpunk</span></div>
-              <div class="theme-swatch" data-theme="dracula" style="background: #282a36;"><span class="theme-swatch-label" style="color: #ff79c6;">Dracula</span></div>
-            </div>
-          </div>
-          <div class="setting-group">
-            <div class="setting-label">Accent Color</div>
-            <div class="accent-row" id="accentRow">
-              <div class="accent-circle active" data-color="#00ff88" style="background: #00ff88;"></div>
-              <div class="accent-circle" data-color="#58a6ff" style="background: #58a6ff;"></div>
-              <div class="accent-circle" data-color="#c084fc" style="background: #c084fc;"></div>
-              <div class="accent-circle" data-color="#fb923c" style="background: #fb923c;"></div>
-              <div class="accent-circle" data-color="#f43f5e" style="background: #f43f5e;"></div>
-              <div class="accent-circle" data-color="#fcee0a" style="background: #fcee0a;"></div>
-              <div class="accent-circle" data-color="#ff79c6" style="background: #ff79c6;"></div>
-              <div class="accent-circle" data-color="#0ea5e9" style="background: #0ea5e9;"></div>
-              <div class="accent-circle" data-color="#84cc16" style="background: #84cc16;"></div>
-            </div>
-          </div>
-
-        </div>
-
-        <!-- TAB: BACKGROUND -->
-        <div class="panel-section" data-psection="background">
-          <div class="setting-group">
-            <div class="setting-label">Background Type</div>
-            <div class="option-group">
-              <button class="option-btn active" data-bg="solid">Solid</button>
-              <button class="option-btn" data-bg="mesh">Mesh</button>
-              <button class="option-btn" data-bg="image">Image</button>
-              <button class="option-btn" data-bg="video">Video</button>
-            </div>
-          </div>
-          <!-- Image wallpaper upload -->
-          <div class="setting-group hidden" id="imageUpload">
-            <div class="setting-label">Custom Image Wallpaper</div>
-            <label class="upload-zone" for="wallpaperInput">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24" style="margin-bottom:8px;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
-              <span>Click to upload image</span>
-              <small>PNG, JPG, WebP, GIF</small>
-            </label>
-            <input type="file" id="wallpaperInput" accept="image/*" hidden />
-          </div>
-          <!-- Mesh colors upload -->
-          <div class="setting-group hidden" id="meshUpload">
-            <div class="setting-label">Mesh Gradient Colors</div>
-            <div style="display: flex; gap: 8px;">
-              <input type="color" id="meshColor1" value="#ffb875" style="width: 100%; height: 32px; border: none; cursor: pointer;" />
-              <input type="color" id="meshColor2" value="#00e5ff" style="width: 100%; height: 32px; border: none; cursor: pointer;" />
-              <input type="color" id="meshColor3" value="#ffd4d9" style="width: 100%; height: 32px; border: none; cursor: pointer;" />
-            </div>
-          </div>
-          <!-- Video wallpaper upload -->
-          <div class="setting-group hidden" id="videoUpload">
-            <div class="setting-label">Custom Video Wallpaper</div>
-            <label class="upload-zone" for="videoWallpaperInput">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24" style="margin-bottom:8px;"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
-              <span>Click to upload video</span>
-              <small>MP4, WebM, MOV</small>
-            </label>
-            <input type="file" id="videoWallpaperInput" accept="video/*" hidden />
-            <div id="videoWallpaperName" style="font-size:11px;color:var(--text-muted);margin-top:6px;"></div>
-          </div>
-          <div class="setting-group">
-            <div class="setting-label">Overlay Darkness <span id="darknessVal">60%</span></div>
-            <input type="range" id="darknessSlider" min="0" max="95" value="60" class="range-slider" />
-          </div>
-          <div class="setting-group">
-            <div class="setting-label">Background Blur <span id="blurVal">0px</span></div>
-            <input type="range" id="blurSlider" min="0" max="20" value="0" class="range-slider" />
+          <h3 class="panel-title">⚙ Appearance Settings</h3>
+          <div class="panel-header-right">
+            <button id="saveSettingsBtn" class="btn-primary" style="padding:7px 22px;font-weight:600">Save Changes</button>
+            <button class="panel-close" id="closePanelBtn">✕</button>
           </div>
         </div>
-
-        <!-- TAB: CLOCK -->
-        <div class="panel-section" data-psection="clock">
-          <div class="setting-group">
-            <div class="setting-label">Visibility Options</div>
-            <button class="option-btn full-width mb-2 active" id="clockToggle">Show Clock Widget</button>
-          </div>
-          <div class="setting-group">
-            <div class="setting-label">Position</div>
-            <select id="clockPosSelect" class="full-width-select" style="width:100%; padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-primary); margin-bottom: 12px;">
-              <option value="top-left">Top Left</option>
-              <option value="top-center">Top Center</option>
-              <option value="top-right">Top Right</option>
-              <option value="center-left">Center Left</option>
-              <option value="center">Center</option>
-              <option value="center-right">Center Right</option>
-              <option value="bottom-left">Bottom Left</option>
-              <option value="bottom-center">Bottom Center</option>
-              <option value="bottom-right">Bottom Right</option>
-            </select>
-          </div>
-          <div class="setting-group">
-            <div class="setting-label">Layout Options</div>
-            <select id="clockLayoutSelect" class="full-width-select" style="width:100%; padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-primary); margin-bottom: 12px;">
-              <option value="time-above-date">Time above Date</option>
-              <option value="date-above-time">Date above Time</option>
-              <option value="inline">Inline Horizontal</option>
-              <option value="split">Split Layout</option>
-            </select>
-          </div>
-          <div class="setting-group">
-            <div class="setting-label">Clock Style</div>
-            <select id="clockStyleSelect" class="full-width-select" style="width:100%; padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-primary); margin-bottom: 12px;">
-              <option value="minimal">Minimal</option>
-              <option value="neon">Neon Mode</option>
-              <option value="cyberpunk">Cyberpunk Mode</option>
-              <option value="glassmorphism">Glassmorphism</option>
-            </select>
-          </div>
-          <div class="setting-group">
-            <div class="setting-label">Animation</div>
-            <select id="clockAnimSelect" class="full-width-select" style="width:100%; padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-primary); margin-bottom: 12px;">
-              <option value="fade">Fade</option>
-              <option value="slide">Slide</option>
-              <option value="glow-pulse">Glow Pulse</option>
-            </select>
-          </div>
-          <div class="setting-group">
-            <div class="setting-label">Date Format</div>
-            <select id="dateFormatSelect" class="full-width-select" style="width:100%; padding: 8px; border-radius: 6px; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-primary); margin-bottom: 12px;">
-              <option value="dd-mm-yyyy">DD MMM</option>
-              <option value="dd/mm/yyyy">DD/MM/YYYY</option>
-              <option value="mm/dd/yyyy">MM/DD/YYYY</option>
-              <option value="day-month-date">Day, Month Date</option>
-              <option value="full">Full Readable</option>
-              <option value="short">Short (DD/MM)</option>
-            </select>
-          </div>
-          <div class="setting-group">
-            <div class="setting-label">Time Settings</div>
-            <label class="toggle-row" style="margin-bottom: 8px;">
-              <div class="pill-toggle" id="clock24hrToggle"><div class="pill-knob"></div></div>
-              <span>24 Hour Format</span>
-            </label>
-            <label class="toggle-row">
-              <div class="pill-toggle" id="clockSecondsToggle"><div class="pill-knob"></div></div>
-              <span>Show Seconds</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- TAB: LAYOUT -->
-        <div class="panel-section" data-psection="layout">
-          <div class="setting-group">
-            <div class="setting-label">View By</div>
-            <div class="option-group" id="viewModeGroup">
-              <button class="option-btn active" data-viewmode="grid">Grid</button>
-              <button class="option-btn" data-viewmode="compact">Compact</button>
-              <button class="option-btn" data-viewmode="category">Category</button>
-              <button class="option-btn" data-viewmode="workspace">Workspace</button>
-            </div>
-          </div>
-          <div class="setting-group">
-            <div class="setting-label">Card Style</div>
-            <div class="option-group">
-              <button class="option-btn active" data-cardstyle="glass">Glass</button>
-              <button class="option-btn" data-cardstyle="solid">Solid</button>
-              <button class="option-btn" data-cardstyle="minimal">Minimal</button>
-              <button class="option-btn" data-cardstyle="bordered">Bordered</button>
-            </div>
-          </div>
-          <div class="setting-group">
-            <div class="setting-label">Grid Columns</div>
-            <input type="range" id="columnsSlider" min="2" max="8" value="4" class="range-slider" />
-            <span id="columnsVal" style="font-size:12px; color:var(--text-secondary); margin-top:4px; display:block;">4 columns</span>
-          </div>
-          <div class="setting-group">
-            <div class="setting-label">Show Favicons</div>
-            <label class="toggle-row">
-              <div class="pill-toggle active" id="faviconToggle"><div class="pill-knob"></div></div>
-              <span>Display website icons</span>
-            </label>
-          </div>
-          <div class="setting-group">
-            <div class="setting-label">Show URL</div>
-            <label class="toggle-row">
-              <div class="pill-toggle active" id="urlToggle"><div class="pill-knob"></div></div>
-              <span>Show domain below title</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- TAB: DATA -->
-        <div class="panel-section" data-psection="data">
-          <div class="setting-group">
-            <div class="setting-label">Export Bookmarks</div>
-            <p class="setting-hint">Download all your bookmarks as a JSON backup file.</p>
-            <button class="data-action-btn" id="exportBookmarksBtn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              Download Bookmarks JSON
+        <div class="panel-inner">
+          <nav class="panel-sidebar">
+            <button class="panel-nav-item active" data-ptab="theme">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a10 10 0 0 1 0 20"/></svg>Theme
             </button>
-          </div>
-          <div class="setting-group">
-            <div class="setting-label">Import Bookmarks</div>
-            <p class="setting-hint">Restore bookmarks from a previously exported JSON file.</p>
-            <label class="data-action-btn" for="importBookmarksInput" style="cursor:pointer;">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              Import from JSON File
-            </label>
-            <input type="file" id="importBookmarksInput" accept=".json" hidden />
-          </div>
-          <div class="setting-group">
-            <div class="setting-label">Open Downloads</div>
-            <p class="setting-hint">View all browser downloads in a new tab.</p>
-            <button class="data-action-btn" id="openDownloadsBtn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
-              Open Downloads Manager
+            <button class="panel-nav-item" data-ptab="background">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>Background
             </button>
-          </div>
-        </div>
+            <button class="panel-nav-item" data-ptab="layout">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Layout
+            </button>
+            <button class="panel-nav-item" data-ptab="clock">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Clock
+            </button>
+            <button class="panel-nav-item" data-ptab="data">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>Data
+            </button>
+          </nav>
+          <div class="panel-main">
 
-        <!-- SAVE SETTINGS FOOTER -->
-        <div class="panel-footer" style="padding: 16px; border-top: 1px solid var(--border); margin-top: 16px; display: flex; justify-content: flex-end;">
-          <button id="saveSettingsBtn" class="btn-primary" style="padding: 8px 24px; font-weight: 600;">Save Changes</button>
-        </div>
-      </div>
-    </div>
+            <!-- TAB: THEME -->
+            <div class="panel-section active" data-psection="theme">
+              <div class="panel-section-title">Color Theme</div>
+              <div class="panel-section-desc">Choose a visual theme for your workspace.</div>
+              <div class="setting-group">
+                <div class="theme-grid" id="themeGrid">
+                  <div class="theme-swatch active" data-theme="terminal" style="background:#080808;border-color:#00ff88"><span class="theme-swatch-label">Terminal</span></div>
+                  <div class="theme-swatch" data-theme="midnight" style="background:#0d1117"><span class="theme-swatch-label">Midnight</span></div>
+                  <div class="theme-swatch" data-theme="aurora" style="background:#0f0c29"><span class="theme-swatch-label">Aurora</span></div>
+                  <div class="theme-swatch" data-theme="sunset" style="background:#0f0a00"><span class="theme-swatch-label">Sunset</span></div>
+                  <div class="theme-swatch" data-theme="ice" style="background:#f0f4f8"><span class="theme-swatch-label" style="color:#000;text-shadow:none">Ice</span></div>
+                  <div class="theme-swatch" data-theme="rose" style="background:#0d0608"><span class="theme-swatch-label">Rose</span></div>
+                  <div class="theme-swatch" data-theme="ash" style="background:#18181b"><span class="theme-swatch-label">Ash</span></div>
+                  <div class="theme-swatch" data-theme="ocean" style="background:#001f3f"><span class="theme-swatch-label">Ocean</span></div>
+                  <div class="theme-swatch" data-theme="forest" style="background:#0b1a13"><span class="theme-swatch-label">Forest</span></div>
+                  <div class="theme-swatch" data-theme="cyberpunk" style="background:#000000;border-color:#fcee0a"><span class="theme-swatch-label" style="color:#fcee0a">Cyberpunk</span></div>
+                  <div class="theme-swatch" data-theme="dracula" style="background:#282a36"><span class="theme-swatch-label" style="color:#ff79c6">Dracula</span></div>
+                  <div class="theme-swatch" data-theme="monokai" style="background:#272822"><span class="theme-swatch-label" style="color:#a6e22e">Monokai</span></div>
+                  <div class="theme-swatch" data-theme="nord" style="background:#2e3440"><span class="theme-swatch-label" style="color:#88c0d0">Nord</span></div>
+                  <div class="theme-swatch" data-theme="gruvbox" style="background:#1d2021"><span class="theme-swatch-label" style="color:#b8bb26">Gruvbox</span></div>
+                  <div class="theme-swatch" data-theme="tokyonight" style="background:#1a1b26"><span class="theme-swatch-label" style="color:#7aa2f7">Tokyo Night</span></div>
+                  <div class="theme-swatch" data-theme="catppuccin" style="background:#1e1e2e"><span class="theme-swatch-label" style="color:#cba6f7">Catppuccin</span></div>
+                  <div class="theme-swatch" data-theme="solarized" style="background:#002b36"><span class="theme-swatch-label" style="color:#2aa198">Solarized</span></div>
+                </div>
+              </div>
+            </div>
 
-    <!-- ══════════════════════════════════════════════ -->
-    <!-- ADD / EDIT BOOKMARK MODAL                      -->
-    <!-- ══════════════════════════════════════════════ -->
+            <!-- TAB: BACKGROUND -->
+            <div class="panel-section" data-psection="background">
+              <div class="panel-section-title">Background</div>
+              <div class="panel-section-desc">Customize your new tab background.</div>
+              <div class="setting-group">
+                <div class="setting-label">Background Type</div>
+                <div class="option-group">
+                  <button class="option-btn active" data-bg="solid">Solid</button>
+                  <button class="option-btn" data-bg="mesh">Mesh</button>
+                  <button class="option-btn" data-bg="image">Image</button>
+                  <button class="option-btn" data-bg="video">Video</button>
+                </div>
+              </div>
+              <div class="setting-group" id="solidColorPicker">
+                <div class="setting-label">Accent Color</div>
+                <div class="accent-row" id="accentRow">
+                  <div class="accent-circle active" data-color="#00ff88" style="background:#00ff88"></div>
+                  <div class="accent-circle" data-color="#58a6ff" style="background:#58a6ff"></div>
+                  <div class="accent-circle" data-color="#c084fc" style="background:#c084fc"></div>
+                  <div class="accent-circle" data-color="#fb923c" style="background:#fb923c"></div>
+                  <div class="accent-circle" data-color="#f43f5e" style="background:#f43f5e"></div>
+                  <div class="accent-circle" data-color="#fcee0a" style="background:#fcee0a"></div>
+                  <div class="accent-circle" data-color="#ff79c6" style="background:#ff79c6"></div>
+                  <div class="accent-circle" data-color="#0ea5e9" style="background:#0ea5e9"></div>
+                  <div class="accent-circle" data-color="#84cc16" style="background:#84cc16"></div>
+                </div>
+              </div>
+              <div class="setting-group hidden" id="imageUpload">
+                <div class="setting-label">Custom Image Wallpaper</div>
+                <label class="upload-zone" for="wallpaperInput">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24" style="margin-bottom:8px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                  <span>Click to upload image</span><small>PNG, JPG, WebP, GIF</small>
+                </label>
+                <input type="file" id="wallpaperInput" accept="image/*" hidden />
+              </div>
+              <div class="setting-group hidden" id="meshUpload">
+                <div class="setting-label">Mesh Gradient Colors</div>
+                <div style="display:flex;gap:8px">
+                  <input type="color" id="meshColor1" value="#ffb875" style="width:100%;height:36px;border:none;cursor:pointer;border-radius:6px" />
+                  <input type="color" id="meshColor2" value="#00e5ff" style="width:100%;height:36px;border:none;cursor:pointer;border-radius:6px" />
+                  <input type="color" id="meshColor3" value="#ffd4d9" style="width:100%;height:36px;border:none;cursor:pointer;border-radius:6px" />
+                </div>
+              </div>
+              <div class="setting-group hidden" id="videoUpload">
+                <div class="setting-label">Custom Video Wallpaper</div>
+                <label class="upload-zone" for="videoWallpaperInput">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="24" height="24" style="margin-bottom:8px"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                  <span>Click to upload video</span><small>MP4, WebM, MOV</small>
+                </label>
+                <input type="file" id="videoWallpaperInput" accept="video/*" hidden />
+                <div id="videoWallpaperName" style="font-size:11px;color:var(--text-muted);margin-top:6px"></div>
+              </div>
+              <div class="setting-group">
+                <div class="setting-label">Overlay Darkness <span id="darknessVal">60%</span></div>
+                <input type="range" id="darknessSlider" min="0" max="95" value="60" class="range-slider" />
+              </div>
+              <div class="setting-group">
+                <div class="setting-label">Background Blur <span id="blurVal">0px</span></div>
+                <input type="range" id="blurSlider" min="0" max="20" value="0" class="range-slider" />
+              </div>
+            </div>
+
+            <!-- TAB: LAYOUT -->
+            <div class="panel-section" data-psection="layout">
+              <div class="panel-section-title">Layout</div>
+              <div class="panel-section-desc">Control how bookmarks are displayed.</div>
+              <div class="setting-group">
+                <div class="setting-label">View Mode</div>
+                <div class="option-group" id="viewModeGroup">
+                  <button class="option-btn active" data-viewmode="grid">Grid</button>
+                  <button class="option-btn" data-viewmode="compact">Compact</button>
+                  <button class="option-btn" data-viewmode="category">Category</button>
+                  <button class="option-btn" data-viewmode="workspace">Workspace</button>
+                </div>
+              </div>
+              <div class="setting-group">
+                <div class="setting-label">Card Style</div>
+                <div class="option-group">
+                  <button class="option-btn active" data-cardstyle="glass">Glass</button>
+                  <button class="option-btn" data-cardstyle="solid">Solid</button>
+                  <button class="option-btn" data-cardstyle="minimal">Minimal</button>
+                  <button class="option-btn" data-cardstyle="bordered">Bordered</button>
+                </div>
+              </div>
+              <div class="setting-group">
+                <div class="setting-label">Grid Columns</div>
+                <input type="range" id="columnsSlider" min="2" max="8" value="4" class="range-slider" />
+                <span id="columnsVal" style="font-size:12px;color:var(--text-secondary);margin-top:4px;display:block">4 columns</span>
+              </div>
+              <div class="setting-group">
+                <div class="setting-label">Show Favicons</div>
+                <label class="toggle-row">
+                  <div class="pill-toggle active" id="faviconToggle"><div class="pill-knob"></div></div>
+                  <span>Display website icons on cards</span>
+                </label>
+              </div>
+              <div class="setting-group">
+                <div class="setting-label">Show URL</div>
+                <label class="toggle-row">
+                  <div class="pill-toggle active" id="urlToggle"><div class="pill-knob"></div></div>
+                  <span>Show domain below title</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- TAB: CLOCK -->
+            <div class="panel-section" data-psection="clock">
+              <div class="panel-section-title">Clock Widget</div>
+              <div class="panel-section-desc">Configure the date and time display.</div>
+              <div class="setting-group">
+                <div class="setting-label">Visibility</div>
+                <button class="option-btn active" id="clockToggle" style="width:100%">Show Clock Widget</button>
+              </div>
+              <div class="setting-group">
+                <div class="setting-label">Position</div>
+                <select id="clockPosSelect" style="width:100%;padding:10px;border-radius:8px;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-primary)">
+                  <option value="top-left">Top Left</option>
+                  <option value="top-center">Top Center</option>
+                  <option value="top-right">Top Right</option>
+                  <option value="center-left">Center Left</option>
+                  <option value="center">Center</option>
+                  <option value="center-right">Center Right</option>
+                  <option value="bottom-left">Bottom Left</option>
+                  <option value="bottom-center">Bottom Center</option>
+                  <option value="bottom-right">Bottom Right</option>
+                </select>
+              </div>
+              <div class="setting-group">
+                <div class="setting-label">Layout</div>
+                <select id="clockLayoutSelect" style="width:100%;padding:10px;border-radius:8px;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-primary)">
+                  <option value="time-above-date">Time above Date</option>
+                  <option value="date-above-time">Date above Time</option>
+                  <option value="inline">Inline Horizontal</option>
+                  <option value="split">Split Layout</option>
+                </select>
+              </div>
+              <div class="setting-group">
+                <div class="setting-label">Clock Style</div>
+                <select id="clockStyleSelect" style="width:100%;padding:10px;border-radius:8px;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-primary)">
+                  <option value="minimal">Minimal</option>
+                  <option value="neon">Neon</option>
+                  <option value="cyberpunk">Cyberpunk</option>
+                  <option value="glassmorphism">Glassmorphism</option>
+                </select>
+              </div>
+              <div class="setting-group">
+                <div class="setting-label">Animation</div>
+                <select id="clockAnimSelect" style="width:100%;padding:10px;border-radius:8px;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-primary)">
+                  <option value="fade">Fade</option>
+                  <option value="slide">Slide</option>
+                  <option value="glow-pulse">Glow Pulse</option>
+                </select>
+              </div>
+              <div class="setting-group">
+                <div class="setting-label">Date Format</div>
+                <select id="dateFormatSelect" style="width:100%;padding:10px;border-radius:8px;background:var(--bg-elevated);border:1px solid var(--border);color:var(--text-primary)">
+                  <option value="dd-mm-yyyy">DD MMM (e.g. 2 Jun)</option>
+                  <option value="dd/mm/yyyy">DD/MM/YYYY</option>
+                  <option value="mm/dd/yyyy">MM/DD/YYYY</option>
+                  <option value="day-month-date">Day, Month Date</option>
+                  <option value="full">Full Readable</option>
+                  <option value="short">Short (DD/MM)</option>
+                </select>
+              </div>
+              <div class="setting-group">
+                <div class="setting-label">Time Settings</div>
+                <label class="toggle-row" style="margin-bottom:12px">
+                  <div class="pill-toggle" id="clock24hrToggle"><div class="pill-knob"></div></div>
+                  <span>24 Hour Format</span>
+                </label>
+                <label class="toggle-row">
+                  <div class="pill-toggle" id="clockSecondsToggle"><div class="pill-knob"></div></div>
+                  <span>Show Seconds</span>
+                </label>
+              </div>
+            </div>
+
+            <!-- TAB: DATA -->
+            <div class="panel-section" data-psection="data">
+              <div class="panel-section-title">Data &amp; Backup</div>
+              <div class="panel-section-desc">Export, import or reset your BookmarkX data.</div>
+              <div class="setting-group">
+                <div class="setting-label">Export Bookmarks</div>
+                <p class="setting-hint">Download all your bookmarks as a JSON backup file.</p>
+                <button class="data-action-btn" id="exportBookmarksBtn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                  Download Bookmarks JSON
+                </button>
+              </div>
+              <div class="setting-group">
+                <div class="setting-label">Import Bookmarks</div>
+                <p class="setting-hint">Restore bookmarks from a previously exported JSON file.</p>
+                <label class="data-action-btn" for="importBookmarksInput" style="cursor:pointer">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                  Import from JSON File
+                </label>
+                <input type="file" id="importBookmarksInput" accept=".json" hidden />
+              </div>
+              <div class="setting-group">
+                <div class="setting-label">Open Downloads</div>
+                <p class="setting-hint">View all browser downloads in a new tab.</p>
+                <button class="data-action-btn" id="openDownloadsBtn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/></svg>
+                  Open Downloads Manager
+                </button>
+              </div>
+            </div>
+
+          </div><!-- /.panel-main -->
+        </div><!-- /.panel-inner -->
+      </div><!-- /.panel-content -->
+    </div><!-- /#appearancePanel -->
+
+    <!-- ADD / EDIT BOOKMARK MODAL -->
     <div id="bookmarkModal" class="modal hidden">
       <div class="modal-backdrop" id="modalBackdrop"></div>
       <div class="modal-card">
@@ -342,12 +339,11 @@
       </div>
     </div>
 
-    <!-- Toast -->
     <div id="toast" class="toast hidden"></div>
 
   </div><!-- /#app -->
 
-  <!-- Floating Vertical Side Dock (Persistent, floats outside #app) -->
+  <!-- Floating Vertical Side Dock -->
   <div id="side-dock">
     <button class="dock-btn" id="dockSearch" title="Search Bookmarks (/)">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
@@ -355,42 +351,29 @@
     <button class="dock-btn" id="dockDownloads" title="Open Chrome Downloads">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
     </button>
-    <button class="dock-btn" id="dockClockToggle" title="Toggle Date & Time">
-      <svg class="icon-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"></circle>
-        <polyline points="12 6 12 12 16 14"></polyline>
-      </svg>
-      <svg class="icon-clock-off hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="12" cy="12" r="10"></circle>
-        <polyline points="12 6 12 12 16 14"></polyline>
-        <line x1="1" y1="1" x2="23" y2="23"></line>
-      </svg>
+    <button class="dock-btn" id="dockClockToggle" title="Toggle Date &amp; Time">
+      <svg class="icon-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+      <svg class="icon-clock-off hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline><line x1="1" y1="1" x2="23" y2="23"></line></svg>
     </button>
     <button class="dock-btn" id="dockAddBookmark" title="Add Bookmark">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
     </button>
-    <button class="dock-btn active" id="uiToggle" title="Toggle Bookmarks visibility (Space)">
-      <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-        <circle cx="12" cy="12" r="3"></circle>
-      </svg>
-      <svg class="icon-eye-off hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-        <line x1="1" y1="1" x2="23" y2="23"></line>
-      </svg>
+    <button class="dock-btn active" id="uiToggle" title="Toggle Bookmarks (Space)">
+      <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+      <svg class="icon-eye-off hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
     </button>
     <button class="dock-btn" id="dockSettings" title="Appearance Settings">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
     </button>
   </div>
 
-  <!-- Sleek Glassmorphic Search Overlay -->
+  <!-- Search Overlay -->
   <div id="searchOverlay" class="search-overlay hidden">
     <div class="search-modal">
       <div class="search-modal-header">
         <svg class="search-modal-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         <input type="text" id="dockSearchInput" placeholder="Search your bookmarks..." autocomplete="off">
-        <button id="closeSearchBtn" class="search-modal-close" title="Close Search (Esc)">✕</button>
+        <button id="closeSearchBtn" class="search-modal-close" title="Close (Esc)">✕</button>
       </div>
       <div id="searchResultsCount" class="search-results-count"></div>
       <div id="searchResultsList" class="search-results-list"></div>

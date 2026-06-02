@@ -1,16 +1,26 @@
 const ThemeUtils = {
   async init() {
     return new Promise(resolve => {
-      chrome.storage.local.get(['bx_theme', 'bx_accent'], items => {
-        this.applyTheme(items.bx_theme || 'terminal');
-        this.applyAccent(items.bx_accent || null);
+      chrome.storage.local.get(['bx_v2_settings', 'bx_theme', 'bx_accent'], items => {
+        const s = items.bx_v2_settings || {};
+        // Prefer unified settings, fall back to legacy keys
+        const theme = s.theme || items.bx_theme || 'terminal';
+        const accent = s.accent || items.bx_accent || null;
+        this.applyTheme(theme);
+        this.applyAccent(accent);
         resolve();
       });
     });
   },
 
   applyTheme(theme) {
-    document.body.setAttribute('data-theme', theme);
+    document.body.setAttribute('data-theme', theme || 'terminal');
+  },
+
+  applyFont(font) {
+    if (font) {
+      document.body.setAttribute('data-font', font);
+    }
   },
 
   applyAccent(color) {
@@ -21,12 +31,18 @@ const ThemeUtils = {
       document.documentElement.style.removeProperty('--accent-glow');
       return;
     }
+
+    // Validate hex color format: must be #RRGGBB
+    if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
+      console.warn('[BookmarkX] Invalid accent color format:', color, '— expected #RRGGBB');
+      return;
+    }
+
     document.documentElement.style.setProperty('--accent', color);
     
-    // Auto-calculate glow and bg if possible
-    const r = parseInt(color.slice(1, 3), 16) || 0;
-    const g = parseInt(color.slice(3, 5), 16) || 0;
-    const b = parseInt(color.slice(5, 7), 16) || 0;
+    const r = parseInt(color.slice(1, 3), 16);
+    const g = parseInt(color.slice(3, 5), 16);
+    const b = parseInt(color.slice(5, 7), 16);
     
     document.documentElement.style.setProperty('--accent-hover', color);
     document.documentElement.style.setProperty('--accent-bg', `rgba(${r},${g},${b},0.1)`);

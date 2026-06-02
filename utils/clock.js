@@ -121,10 +121,27 @@ class ClockWidget {
   }
 }
 
-// Initialize when DOM is ready
+// Initialize when DOM is ready, but wait for store to have settings loaded
 document.addEventListener('DOMContentLoaded', () => {
-  // Give store a moment to initialize if needed
-  setTimeout(() => {
+  function initClock() {
     window.clockWidgetInstance = new ClockWidget();
-  }, 50);
+    window.clockWidget = window.clockWidgetInstance; // alias used in newtab.js
+  }
+
+  // If store is already ready (e.g. fast load), init immediately
+  if (window._bxStoreReady) {
+    initClock();
+  } else {
+    // Wait for the storeReady event from newtab.js init()
+    window.addEventListener('bookmarkx:storeReady', () => {
+      initClock();
+    }, { once: true });
+    
+    // Safety fallback: if event never fires within 3s, init anyway
+    setTimeout(() => {
+      if (!window.clockWidgetInstance) {
+        initClock();
+      }
+    }, 3000);
+  }
 });

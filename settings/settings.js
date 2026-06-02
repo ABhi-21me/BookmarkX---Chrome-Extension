@@ -24,7 +24,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('selTheme').addEventListener('change', e => {
       settings.theme = e.target.value;
       ThemeUtils.applyTheme(settings.theme);
-      chrome.storage.local.set({ bx_v2_settings: settings });
+      chrome.storage.local.set({ 
+        bx_v2_settings: settings,
+        bx_theme: settings.theme  // Keep legacy key in sync
+      });
     });
   });
 
