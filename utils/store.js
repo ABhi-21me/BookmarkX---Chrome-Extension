@@ -76,8 +76,8 @@ const initialState = {
   settings: {
     theme: 'terminal',
     accent: '#00ff88',
-    bgType: 'solid',
-    bgVal: '#080808',
+    bgType: 'mesh',
+    bgVal: '',
     bgDarkness: 60,
     bgBlur: 0,
     meshColors: ['#ffb875', '#00e5ff', '#ffd4d9'],

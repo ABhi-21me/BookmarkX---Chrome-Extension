@@ -5,6 +5,24 @@ const BG_MODES = {
   video: { label: 'Custom Video' }
 };
 
+/**
+ * Wraps VideoDB operations with error handling and user feedback
+ * @param {Function} operation - Async function to execute
+ * @param {*} fallback - Value to return on error (default: null)
+ * @returns {Promise<*>} Operation result or fallback value
+ */
+async function safeVideoOperation(operation, fallback = null) {
+  try {
+    return await operation();
+  } catch (err) {
+    console.error('[BookmarkX] VideoDB Error:', err);
+    if (typeof window.showToast === 'function') {
+      window.showToast('Video storage error. ' + (err.message || 'Please try again.'), true);
+    }
+    return fallback;
+  }
+}
+
 const VideoDB = {
   dbName: 'BookmarkX_VideoDB',
   storeName: 'videos',
@@ -68,8 +86,8 @@ const BackgroundUtils = {
       ], items => {
         // Prefer unified settings, fall back to legacy keys
         const s = items.bx_v2_settings || {};
-        const bgType = s.bgType || items.bx_bg_type || 'solid';
-        const bgVal = s.bgVal || items.bx_bg_val || '#080808';
+        const bgType = s.bgType || items.bx_bg_type || 'mesh';
+        const bgVal = s.bgVal || items.bx_bg_val || '';
         const bgDarkness = s.bgDarkness !== undefined ? s.bgDarkness : (items.bx_bg_darkness !== undefined ? items.bx_bg_darkness : 60);
         const bgBlur = s.bgBlur !== undefined ? s.bgBlur : (items.bx_bg_blur || 0);
         const meshColors = s.meshColors;
@@ -94,8 +112,11 @@ const BackgroundUtils = {
         videoEl.classList.add('active');
         this.layer.classList.add('video-active');
         
-        // Load video blob from IndexedDB
-        VideoDB.loadVideo().then(blob => {
+        // Load video blob from IndexedDB with error handling
+        safeVideoOperation(
+          () => VideoDB.loadVideo(),
+          null
+        ).then(blob => {
           if (blob) {
             const url = URL.createObjectURL(blob);
             if (videoEl.src !== url) {
@@ -104,15 +125,12 @@ const BackgroundUtils = {
           } else if (value && videoEl.src !== value) {
             // Fallback for previously saved dataURL
             videoEl.src = value;
+          } else {
+            // No video available, fall back to mesh
+            console.warn('[BookmarkX] No video wallpaper found, falling back to mesh');
+            videoEl.classList.remove('active');
+            if (this.layer) this.layer.classList.remove('video-active');
           }
-        }).catch(err => {
-          console.error('[BookmarkX] Error loading video wallpaper:', err);
-          if (typeof window.showToast === 'function') {
-            window.showToast('Could not load video wallpaper. Please re-select it.', true);
-          }
-          // Fall back to solid background
-          videoEl.classList.remove('active');
-          if (this.layer) this.layer.classList.remove('video-active');
         });
       } else {
         videoEl.classList.remove('active');
@@ -122,7 +140,10 @@ const BackgroundUtils = {
     }
 
     if (type === 'solid') {
-      this.layer.style.backgroundColor = value || '#080808';
+      // Solid removed from UI — treat as mesh fallback
+      const c1 = '#ffb875', c2 = '#00e5ff', c3 = '#ffd4d9';
+      this.layer.style.backgroundImage = `radial-gradient(at 40% 20%, ${c1} 0px, transparent 50%), radial-gradient(at 80% 0%, ${c2} 0px, transparent 50%), radial-gradient(at 0% 50%, ${c3} 0px, transparent 50%)`;
+      this.layer.style.backgroundColor = '#0a0a0a';
     } else if (type === 'mesh') {
       const c1 = meshColors && meshColors[0] ? meshColors[0] : '#ffb875';
       const c2 = meshColors && meshColors[1] ? meshColors[1] : '#00e5ff';

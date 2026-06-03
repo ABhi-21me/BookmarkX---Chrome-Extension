@@ -81,6 +81,10 @@ async function loadSettings() {
       if (items.bx_v2_settings) {
         Object.assign(state.settings, items.bx_v2_settings);
       }
+      // If bgType is 'solid' (old default), upgrade to 'mesh'
+      if (state.settings.bgType === 'solid') {
+        state.settings.bgType = 'mesh';
+      }
       if (items.bx_ui_visible !== undefined) state.isUIVisible = items.bx_ui_visible;
       if (items.bx_viewMode !== undefined) state.viewMode = items.bx_viewMode;
       // Sync legacy keys so BackgroundUtils.init() reads correct values
@@ -189,8 +193,10 @@ function bindEvents() {
 
   // Show/Hide UI toggle
   document.getElementById('uiToggle').addEventListener('click', () => {
-    state.isUIVisible = !state.isUIVisible; // This will trigger the reactive subscription
-
+    state.isUIVisible = !state.isUIVisible;
+    // Also call directly in case the reactive subscription misfires
+    applyUIVisibility();
+    saveSettings();
   });
 
   // Persistent Side Dock: Open Chrome Downloads
@@ -293,10 +299,8 @@ function bindEvents() {
   const saveSettingsBtn = document.getElementById('saveSettingsBtn');
   if (saveSettingsBtn) {
     saveSettingsBtn.addEventListener('click', () => {
-      saveSettings(); // Ensure settings are forced to save
-      document.getElementById('appearancePanel').classList.add('hidden');
-      if (dockSettings) dockSettings.classList.remove('active');
-      showToast('All set! Your changes have been saved. Please refresh the page to see the updates.');
+      saveSettings();
+      showToast('Settings saved!');
     });
   }
 
@@ -322,26 +326,31 @@ function bindEvents() {
     });
   });
 
-  // Theme
-  document.getElementById('themeGrid').addEventListener('click', e => {
-    const swatch = e.target.closest('.theme-swatch');
-    if (swatch) {
+  // Theme — Listen on ALL theme swatches across all category grids
+  document.querySelectorAll('.theme-swatch').forEach(swatch => {
+    swatch.addEventListener('click', () => {
       state.settings.theme = swatch.dataset.theme;
       ThemeUtils.applyTheme(state.settings.theme);
+      // Pulse animation on selection (one pass only)
+      swatch.classList.remove('just-selected');
+      void swatch.offsetWidth; // reflow to restart animation
+      swatch.classList.add('just-selected');
+      swatch.addEventListener('animationend', () => swatch.classList.remove('just-selected'), { once: true });
       syncAppearanceUI();
-
-    }
+    });
   });
 
-  document.getElementById('accentRow').addEventListener('click', e => {
-    const circle = e.target.closest('.accent-circle');
-    if (circle) {
-      state.settings.accent = circle.dataset.color;
-      ThemeUtils.applyAccent(state.settings.accent);
-      syncAppearanceUI();
-
-    }
-  });
+  const accentRow = document.getElementById('accentRow');
+  if (accentRow) {
+    accentRow.addEventListener('click', e => {
+      const circle = e.target.closest('.accent-circle');
+      if (circle) {
+        state.settings.accent = circle.dataset.color;
+        ThemeUtils.applyAccent(state.settings.accent);
+        syncAppearanceUI();
+      }
+    });
+  }
 
   document.querySelectorAll('[data-font]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -356,7 +365,6 @@ function bindEvents() {
   document.querySelectorAll('[data-bg]').forEach(btn => {
     btn.addEventListener('click', () => {
       state.settings.bgType = btn.dataset.bg;
-      if (state.settings.bgType === 'solid') state.settings.bgVal = '#080808';
       BackgroundUtils.apply(state.settings.bgType, state.settings.bgVal, state.settings.meshColors);
       syncAppearanceUI();
     });
@@ -371,11 +379,78 @@ function bindEvents() {
         state.settings.bgVal = reader.result;
         state.settings.bgType = 'image';
         BackgroundUtils.apply('image', state.settings.bgVal);
-
+        _showImagePreview(reader.result);
       };
       reader.readAsDataURL(file);
     }
   });
+
+  // Image dropzone drag-and-drop
+  const imageDropZone = document.getElementById('imageDropZone');
+  if (imageDropZone) {
+    imageDropZone.addEventListener('dragover', e => { e.preventDefault(); imageDropZone.classList.add('drag-active'); });
+    imageDropZone.addEventListener('dragleave', () => imageDropZone.classList.remove('drag-active'));
+    imageDropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      imageDropZone.classList.remove('drag-active');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          state.settings.bgVal = reader.result;
+          state.settings.bgType = 'image';
+          BackgroundUtils.apply('image', state.settings.bgVal);
+          _showImagePreview(reader.result);
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
+
+  // Remove wallpaper
+  const removeWallpaperBtn = document.getElementById('removeWallpaperBtn');
+  if (removeWallpaperBtn) {
+    removeWallpaperBtn.addEventListener('click', () => {
+      state.settings.bgVal = '';
+      state.settings.bgType = 'mesh';
+      BackgroundUtils.apply('mesh', '', state.settings.meshColors);
+      _hideImagePreview();
+      document.querySelectorAll('[data-bg]').forEach(b => b.classList.toggle('active', b.dataset.bg === 'mesh'));
+      syncAppearanceUI();
+    });
+  }
+
+  const removeImagePreview = document.getElementById('removeImagePreview');
+  if (removeImagePreview) {
+    removeImagePreview.addEventListener('click', e => {
+      e.stopPropagation();
+      if (removeWallpaperBtn) removeWallpaperBtn.click();
+    });
+  }
+
+  function _showImagePreview(src) {
+    const wrap = document.getElementById('imagePreviewWrap');
+    const hint = document.getElementById('imageDropHint');
+    const thumb = document.getElementById('imagePreviewThumb');
+    const removeBtn = document.getElementById('removeWallpaperBtn');
+    if (wrap) { wrap.classList.remove('hidden'); thumb.src = src; }
+    if (hint) hint.classList.add('hidden');
+    if (removeBtn) removeBtn.classList.remove('hidden');
+  }
+
+  function _hideImagePreview() {
+    const wrap = document.getElementById('imagePreviewWrap');
+    const hint = document.getElementById('imageDropHint');
+    const removeBtn = document.getElementById('removeWallpaperBtn');
+    if (wrap) { wrap.classList.add('hidden'); document.getElementById('imagePreviewThumb').src = ''; }
+    if (hint) hint.classList.remove('hidden');
+    if (removeBtn) removeBtn.classList.add('hidden');
+  }
+
+  // Restore image preview if wallpaper is already set
+  if (state.settings.bgType === 'image' && state.settings.bgVal) {
+    _showImagePreview(state.settings.bgVal);
+  }
 
   const vidInput = document.getElementById('videoWallpaperInput');
   if (vidInput) {
@@ -389,15 +464,98 @@ function bindEvents() {
           state.settings.bgType = 'video';
           state.settings.bgVal = '';
           BackgroundUtils.apply('video', '');
-
-          const nameEl = document.getElementById('videoWallpaperName');
-          if (nameEl) nameEl.textContent = file.name;
-          showToast('Video saved successfully!');
+          _showVideoPreview(file);
+          showToast('Video wallpaper saved!');
         }).catch(err => {
           console.error(err);
-          showToast('Failed to save video.', true);
+          showToast('Failed to save video. Try a smaller file.', true);
         });
       }
+    });
+  }
+
+  // Video dropzone drag-and-drop
+  const videoDropZone = document.getElementById('videoDropZone');
+  if (videoDropZone) {
+    videoDropZone.addEventListener('dragover', e => { e.preventDefault(); videoDropZone.classList.add('drag-active'); });
+    videoDropZone.addEventListener('dragleave', () => videoDropZone.classList.remove('drag-active'));
+    videoDropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      videoDropZone.classList.remove('drag-active');
+      const file = e.dataTransfer.files[0];
+      if (file && (file.type === 'video/mp4' || file.type === 'video/webm')) {
+        if (vidInput) { vidInput.files = e.dataTransfer.files; vidInput.dispatchEvent(new Event('change')); }
+      }
+    });
+  }
+
+  // Remove video preview
+  const removeVideoPreview = document.getElementById('removeVideoPreview');
+  if (removeVideoPreview) {
+    removeVideoPreview.addEventListener('click', e => {
+      e.stopPropagation();
+      state.settings.bgType = 'mesh';
+      state.settings.bgVal = '';
+      BackgroundUtils.apply('mesh', '', state.settings.meshColors);
+      _hideVideoPreview();
+      document.querySelectorAll('[data-bg]').forEach(b => b.classList.toggle('active', b.dataset.bg === 'mesh'));
+    });
+  }
+
+  // Video loop / mute toggles
+  const videoLoopToggle = document.getElementById('videoLoopToggle');
+  const videoMuteToggle = document.getElementById('videoMuteToggle');
+  const bgVideoEl = document.getElementById('bg-video');
+
+  if (videoLoopToggle) {
+    videoLoopToggle.addEventListener('click', () => {
+      videoLoopToggle.classList.toggle('active');
+      if (bgVideoEl) bgVideoEl.loop = videoLoopToggle.classList.contains('active');
+      state.settings.videoLoop = videoLoopToggle.classList.contains('active');
+    });
+  }
+  if (videoMuteToggle) {
+    videoMuteToggle.addEventListener('click', () => {
+      videoMuteToggle.classList.toggle('active');
+      if (bgVideoEl) bgVideoEl.muted = videoMuteToggle.classList.contains('active');
+      state.settings.videoMute = videoMuteToggle.classList.contains('active');
+    });
+  }
+
+  function _showVideoPreview(file) {
+    const wrap = document.getElementById('videoPreviewWrap');
+    const hint = document.getElementById('videoDropHint');
+    const nameEl = document.getElementById('videoFileName');
+    const durEl = document.getElementById('videoDuration');
+    const opts = document.getElementById('videoOptions');
+    if (wrap) wrap.classList.remove('hidden');
+    if (hint) hint.classList.add('hidden');
+    if (nameEl) nameEl.textContent = file.name;
+    if (opts) opts.style.display = '';
+    if (durEl && file) {
+      const tmpVid = document.createElement('video');
+      tmpVid.src = URL.createObjectURL(file);
+      tmpVid.addEventListener('loadedmetadata', () => {
+        const d = Math.round(tmpVid.duration);
+        durEl.textContent = `${Math.floor(d/60)}:${String(d%60).padStart(2,'0')}`;
+        URL.revokeObjectURL(tmpVid.src);
+      });
+    }
+  }
+
+  function _hideVideoPreview() {
+    const wrap = document.getElementById('videoPreviewWrap');
+    const hint = document.getElementById('videoDropHint');
+    const opts = document.getElementById('videoOptions');
+    if (wrap) wrap.classList.add('hidden');
+    if (hint) hint.classList.remove('hidden');
+    if (opts) opts.style.display = 'none';
+  }
+
+  // Restore video preview state if video was previously set
+  if (state.settings.bgType === 'video') {
+    safeVideoOperation(() => VideoDB.loadVideo()).then(blob => {
+      if (blob) _showVideoPreview(blob);
     });
   }
 
@@ -415,12 +573,14 @@ function bindEvents() {
 
   });
 
-  // Layout
+  // Layout — Card Style (fix active state)
   document.querySelectorAll('[data-cardstyle]').forEach(btn => {
     btn.addEventListener('click', () => {
       state.settings.cardStyle = btn.dataset.cardstyle;
       document.body.setAttribute('data-cardstyle', state.settings.cardStyle || 'glass');
-
+      // Explicitly sync active class on all cardstyle buttons
+      document.querySelectorAll('[data-cardstyle]').forEach(b =>
+        b.classList.toggle('active', b.dataset.cardstyle === state.settings.cardStyle));
     });
   });
 
@@ -541,7 +701,8 @@ function bindEvents() {
   }
 
   // Modal close buttons
-  document.getElementById('closeModalBtn').addEventListener('click', closeModal);
+  const closeModalBtn = document.getElementById('closeModalBtn');
+  if (closeModalBtn) closeModalBtn.addEventListener('click', closeModal);
   document.getElementById('cancelModalBtn').addEventListener('click', closeModal);
   document.getElementById('modalBackdrop').addEventListener('click', closeModal);
 
@@ -566,12 +727,101 @@ function bindEvents() {
       saveBookmarkFromModal();
     }
   });
+
+  // ── Right-click Context Menu ──
+  const ctxMenu = document.getElementById('bm-context-menu');
+  let ctxTargetId = null;
+
+  document.getElementById('bookmarkGrid').addEventListener('contextmenu', e => {
+    const card = e.target.closest('.bm-card');
+    if (!card) return;
+    e.preventDefault();
+    ctxTargetId = card.dataset.bid;
+    const x = Math.min(e.clientX, window.innerWidth - 200);
+    const y = Math.min(e.clientY, window.innerHeight - 100);
+    ctxMenu.style.left = `${x}px`;
+    ctxMenu.style.top = `${y}px`;
+    ctxMenu.classList.remove('hidden');
+  });
+
+  document.addEventListener('click', () => ctxMenu.classList.add('hidden'));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') ctxMenu.classList.add('hidden'); });
+
+  document.getElementById('ctxEdit').addEventListener('click', () => {
+    ctxMenu.classList.add('hidden');
+    if (ctxTargetId) openModal(ctxTargetId);
+  });
+
+  document.getElementById('ctxDelete').addEventListener('click', async () => {
+    ctxMenu.classList.add('hidden');
+    if (!ctxTargetId) return;
+    try {
+      await BookmarkUtils.remove(ctxTargetId);
+      await loadData();
+      renderAll();
+      showToast('Bookmark deleted.');
+    } catch (err) {
+      showToast('Could not delete bookmark.');
+      console.error(err);
+    }
+  });
+
+  // ── Drag & Drop to reorder ──
+  let dragSrcId = null;
+
+  document.getElementById('bookmarkGrid').addEventListener('dragstart', e => {
+    const card = e.target.closest('.bm-card');
+    if (!card) return;
+    dragSrcId = card.dataset.bid;
+    card.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+  });
+
+  document.getElementById('bookmarkGrid').addEventListener('dragend', e => {
+    const card = e.target.closest('.bm-card');
+    if (card) card.classList.remove('dragging');
+    document.querySelectorAll('.bm-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+  });
+
+  document.getElementById('bookmarkGrid').addEventListener('dragover', e => {
+    e.preventDefault();
+    const card = e.target.closest('.bm-card');
+    if (!card || card.dataset.bid === dragSrcId) return;
+    document.querySelectorAll('.bm-card.drag-over').forEach(c => c.classList.remove('drag-over'));
+    card.classList.add('drag-over');
+  });
+
+  document.getElementById('bookmarkGrid').addEventListener('drop', async e => {
+    e.preventDefault();
+    const card = e.target.closest('.bm-card');
+    if (!card || !dragSrcId || card.dataset.bid === dragSrcId) return;
+    card.classList.remove('drag-over');
+
+    const destId = card.dataset.bid;
+    const dest = state.bookmarks.find(b => b.id === destId);
+    if (!dest) return;
+
+    try {
+      // Move dragged bookmark to same folder as destination, positioned before it
+      await BookmarkUtils.move(dragSrcId, { parentId: dest.parentId });
+      await loadData();
+      renderAll();
+    } catch (err) {
+      console.error('Drag move failed:', err);
+    }
+    dragSrcId = null;
+  });
 }
 
 // â”€â”€â”€ APPLY FUNCTIONS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function applyAllSettings() {
   ThemeUtils.applyTheme(state.settings.theme);
+  // Force CSS variable refresh on the panel content too
+  const panelContent = document.getElementById('appearancePanel');
+  if (panelContent) {
+    panelContent.style.setProperty('--force-repaint', Date.now());
+  }
   ThemeUtils.applyAccent(state.settings.accent);
   BackgroundUtils.apply(state.settings.bgType, state.settings.bgVal, state.settings.meshColors);
   BackgroundUtils.applyOverlay(state.settings.bgDarkness, state.settings.bgBlur);
@@ -659,7 +909,8 @@ function syncAppearanceUI() {
   document.getElementById('videoUpload').classList.toggle('hidden', state.settings.bgType !== 'video');
   const solidColorPicker = document.getElementById('solidColorPicker');
   if (solidColorPicker) {
-    solidColorPicker.classList.toggle('hidden', state.settings.bgType !== 'solid');
+    // Always show accent color picker
+    solidColorPicker.classList.remove('hidden');
   }
   const meshUpload = document.getElementById('meshUpload');
   if (meshUpload) {
@@ -709,6 +960,19 @@ function syncAppearanceUI() {
   if (c24hr) c24hr.classList.toggle('active', state.settings.clock24hr === true);
   const cSecs = document.getElementById('clockSecondsToggle');
   if (cSecs) cSecs.classList.toggle('active', state.settings.clockShowSeconds === true);
+
+  // Update theme preview name (may not exist if banner was removed)
+  const themePreviewName = document.getElementById('themePreviewName');
+  if (themePreviewName) {
+    const activeSwatch = document.querySelector(`.theme-swatch[data-theme="${state.settings.theme}"]`);
+    themePreviewName.textContent = activeSwatch
+      ? (activeSwatch.querySelector('.theme-swatch-label')?.textContent || state.settings.theme)
+      : state.settings.theme;
+  }
+
+  // Sync accent circles if present
+  document.querySelectorAll('.accent-circle').forEach(el =>
+    el.classList.toggle('active', el.dataset.color === state.settings.accent));
 }
 
 // â”€â”€â”€ RENDER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -788,7 +1052,7 @@ function renderCard(b) {
     : '';
 
   return `
-    <a href="${url ? escapeAttr(url) : '#'}" class="bm-card" data-bid="${b.id}">
+    <a href="${url ? escapeAttr(url) : '#'}" class="bm-card" data-bid="${b.id}" draggable="true">
       <div class="card-header">
         ${favHtml}
         <div class="card-title">${escapeHTML(b.title || domain || 'Untitled')}</div>

@@ -23,6 +23,10 @@ const ThemeUtils = {
     }
   },
 
+  isValidHex(color) {
+    return /^#[0-9A-Fa-f]{6}$/.test(color);
+  },
+
   applyAccent(color) {
     if (!color) {
       document.documentElement.style.removeProperty('--accent');
@@ -33,7 +37,7 @@ const ThemeUtils = {
     }
 
     // Validate hex color format: must be #RRGGBB
-    if (!/^#[0-9A-Fa-f]{6}$/.test(color)) {
+    if (!this.isValidHex(color)) {
       console.warn('[BookmarkX] Invalid accent color format:', color, '— expected #RRGGBB');
       return;
     }
